@@ -65,10 +65,16 @@ export class EmbeddingService {
 					input: ["Ping test"],
 					model: this.settings.embeddingModelName,
 				}),
+				throw: false,
 			});
 
 			if (response.status !== 200) {
-				return { success: false, message: `HTTP ${response.status}: ${response.text.slice(0, 150)}` };
+				let errDetail = "";
+				try {
+					if (response.json?.message) errDetail = `: ${response.json.message}`;
+				} catch (e) {}
+				if (!errDetail && response.text) errDetail = `: ${response.text.slice(0, 100)}`;
+				return { success: false, message: `HTTP ${response.status}${errDetail}` };
 			}
 
 			const data = response.json;
@@ -136,10 +142,17 @@ export class EmbeddingService {
 						input: inputs,
 						model: this.settings.embeddingModelName,
 					}),
+					throw: false,
 				});
 
 				if (response.status !== 200) {
-					throw new Error(`API 返回错误代码 ${response.status}: ${response.text}`);
+					let errorDetail = "";
+					try {
+						const errJson = response.json;
+						if (errJson?.message) errorDetail = ` (${errJson.message})`;
+					} catch (e) {}
+					if (!errorDetail && response.text) errorDetail = ` (${response.text.slice(0, 120)})`;
+					throw new Error(`HTTP ${response.status}${errorDetail}`);
 				}
 
 				const data = response.json;
