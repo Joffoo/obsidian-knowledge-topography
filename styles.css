@@ -288,8 +288,9 @@
 }
 
 /* Visibility and state helpers */
+.knowledge-map-container .km-hidden,
 .km-hidden {
-	display: none !important;
+	display: none;
 }
 
 .knowledge-map-error-title {

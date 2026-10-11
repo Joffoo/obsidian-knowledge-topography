@@ -97,7 +97,7 @@ export class KnowledgeMapView extends ItemView {
 					}
 
 					if (decodedPath) {
-						this.app.workspace.openLinkText(decodedPath, "", false);
+						void this.app.workspace.openLinkText(decodedPath, "", false);
 						new Notice(`已打开笔记: ${decodedPath.split("/").pop()}`);
 					}
 				} catch (e) {
@@ -105,7 +105,7 @@ export class KnowledgeMapView extends ItemView {
 				}
 			} else if (event.data.type === "km_theme_change" && event.data.theme) {
 				this.plugin.settings.currentTheme = event.data.theme;
-				this.plugin.saveSettings();
+				void this.plugin.saveSettings();
 			}
 		};
 
@@ -166,8 +166,8 @@ export class KnowledgeMapView extends ItemView {
 			cls: "knowledge-map-primary-btn",
 			text: i18n.btn_retry,
 		});
-		retryBtn.addEventListener("click", async () => {
-			await this.plugin.generateMap();
+		retryBtn.addEventListener("click", () => {
+			void this.plugin.generateMap();
 		});
 	}
 
@@ -184,8 +184,8 @@ export class KnowledgeMapView extends ItemView {
 			cls: "knowledge-map-primary-btn",
 			text: i18n.btn_build,
 		});
-		btn.addEventListener("click", async () => {
-			await this.plugin.generateMap();
+		btn.addEventListener("click", () => {
+			void this.plugin.generateMap();
 		});
 	}
 

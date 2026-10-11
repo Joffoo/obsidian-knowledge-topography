@@ -47,7 +47,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 
 		// 3. Register Left Ribbon Icon
 		this.addRibbonIcon("map", t(this.settings.locale).ribbon_tooltip, () => {
-			this.activateView();
+			void this.activateView();
 		});
 
 		// 4. Register Commands
@@ -55,7 +55,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 			id: "open-knowledge-map",
 			name: t(this.settings.locale).cmd_open,
 			callback: () => {
-				this.activateView();
+				void this.activateView();
 			},
 		});
 
@@ -63,7 +63,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 			id: "regenerate-knowledge-map",
 			name: t(this.settings.locale).cmd_rebuild,
 			callback: () => {
-				this.generateMap();
+				void this.generateMap();
 			},
 		});
 
@@ -126,14 +126,14 @@ export default class KnowledgeMapPlugin extends Plugin {
 		}
 
 		if (leaf) {
-			workspace.revealLeaf(leaf);
+			void workspace.revealLeaf(leaf);
 		}
 	}
 
 	private getActiveView(): KnowledgeMapView | null {
 		const leaves = this.app.workspace.getLeavesOfType(KNOWLEDGE_MAP_VIEW_TYPE);
 		if (leaves.length > 0 && leaves[0].view instanceof KnowledgeMapView) {
-			return leaves[0].view as KnowledgeMapView;
+			return leaves[0].view;
 		}
 		return null;
 	}

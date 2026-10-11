@@ -1,4 +1,4 @@
-import { MapData, Point2D, ThemeConfig } from "../types";
+import { MapData, Point2D } from "../types";
 import { THEMES, getTheme } from "./themes";
 
 export interface HtmlGeneratorOptions {

@@ -231,7 +231,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			.addButton((btn) => {
 				btn
 					.setButtonText(i18n.clear_btn)
-					.setDestructive()
+					.setWarning()
 					.onClick(async () => {
 						await this.plugin.cacheManager.clear();
 						new Notice(i18n.clear_notice);

@@ -1,4 +1,4 @@
-import { App, TFile } from "obsidian";
+import { App } from "obsidian";
 import { NoteItem, KnowledgeMapSettings } from "../types";
 
 export class VaultIndexer {
