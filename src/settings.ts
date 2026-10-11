@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import KnowledgeMapPlugin from "./main";
+import { t } from "./i18n";
 
 export class KnowledgeMapSettingTab extends PluginSettingTab {
 	private plugin: KnowledgeMapPlugin;
@@ -14,34 +15,53 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.addClass("knowledge-map-settings");
 
+		const i18n = t(this.plugin.settings.locale);
+
 		// Header
-		containerEl.createEl("h2", { text: "知识地图 (Knowledge Map) 设置" });
+		containerEl.createEl("h2", { text: i18n.settings_title });
 
-		// Section 1: Embedding Provider
-		containerEl.createEl("h3", { text: "1. 向量嵌入计算 (Embedding)" });
-
+		// Language Selector
 		new Setting(containerEl)
-			.setName("计算模式")
-			.setDesc("选择使用本地 ONNX 模型直接推理，或调用云端/本地 API 服务")
+			.setName(i18n.lang_name)
+			.setDesc(i18n.lang_desc)
 			.addDropdown((dropdown) => {
 				dropdown
-					.addOption("local-path", "本地 ONNX 模型文件 (离线私密)")
-					.addOption("openai-api", "OpenAI 兼容 API (Ollama / 云端服务)")
+					.addOption("auto", i18n.lang_auto)
+					.addOption("zh", i18n.lang_zh)
+					.addOption("en", i18n.lang_en)
+					.setValue(this.plugin.settings.locale)
+					.onChange(async (val) => {
+						this.plugin.settings.locale = val as any;
+						await this.plugin.saveSettings();
+						this.display(); // Re-render in the new language
+					});
+			});
+
+		// Section 1: Topography Engine
+		containerEl.createEl("h3", { text: i18n.sec_engine });
+
+		new Setting(containerEl)
+			.setName(i18n.mode_name)
+			.setDesc(i18n.mode_desc)
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("openai-api", i18n.opt_api)
+					.addOption("local-path", i18n.opt_local)
 					.setValue(this.plugin.settings.embeddingMode)
 					.onChange(async (val) => {
 						this.plugin.settings.embeddingMode = val as any;
 						await this.plugin.saveSettings();
-						this.display(); // Re-render conditionally
+						this.display();
 					});
 			});
 
 		if (this.plugin.settings.embeddingMode === "local-path") {
 			new Setting(containerEl)
-				.setName("本地模型目录绝对路径")
-				.setDesc("指定本地 ONNX 模型的文件夹（需包含 model.onnx/model_quantized.onnx 及 tokenizer.json）")
+				.setName(i18n.local_path_name)
+				.setDesc(i18n.local_path_desc)
 				.addText((text) => {
 					text
-						.setPlaceholder("例如：E:/models/jina-embeddings-v2-base-zh")
+						.setPlaceholder(i18n.local_path_holder)
 						.setValue(this.plugin.settings.localModelPath)
 						.onChange(async (val) => {
 							this.plugin.settings.localModelPath = val.trim();
@@ -50,8 +70,8 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 				});
 		} else {
 			new Setting(containerEl)
-				.setName("API Base URL")
-				.setDesc("嵌入服务接口地址（支持 OpenAI、Ollama、硅基流动等）")
+				.setName(i18n.api_url_name)
+				.setDesc(i18n.api_url_desc)
 				.addText((text) => {
 					text
 						.setPlaceholder("https://api.openai.com/v1")
@@ -63,8 +83,8 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 				});
 
 			new Setting(containerEl)
-				.setName("API Key")
-				.setDesc("授权密钥（本地 Ollama 可留空）")
+				.setName(i18n.api_key_name)
+				.setDesc(i18n.api_key_desc)
 				.addText((text) => {
 					text
 						.setPlaceholder("sk-...")
@@ -76,8 +96,8 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 				});
 
 			new Setting(containerEl)
-				.setName("嵌入模型名称")
-				.setDesc("调用的向量模型标识")
+				.setName(i18n.model_name)
+				.setDesc(i18n.model_desc)
 				.addText((text) => {
 					text
 						.setPlaceholder("text-embedding-3-small")
@@ -89,16 +109,16 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 				});
 		}
 
-		// Section 2: LLM Synthesis Provider
-		containerEl.createEl("h3", { text: "2. 聚类领域归纳 (LLM API)" });
+		// Section 2: Peak Naming
+		containerEl.createEl("h3", { text: i18n.sec_peak });
 		containerEl.createEl("p", {
-			text: "用于分析各知识山峰的核心笔记，智能总结 2~4 字的专业领域标签。单次生成仅需消耗几十 Token。",
+			text: i18n.sec_peak_desc,
 			cls: "setting-item-description",
 		});
 
 		new Setting(containerEl)
-			.setName("大模型 API Base URL")
-			.setDesc("支持 OpenAI、DeepSeek、硅基流动、Ollama 等兼容接口")
+			.setName(i18n.llm_url_name)
+			.setDesc(i18n.llm_url_desc)
 			.addText((text) => {
 				text
 					.setPlaceholder("https://api.openai.com/v1")
@@ -110,8 +130,8 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("大模型 API Key")
-			.setDesc("对应大模型的访问密钥")
+			.setName(i18n.llm_key_name)
+			.setDesc(i18n.llm_key_desc)
 			.addText((text) => {
 				text
 					.setPlaceholder("sk-...")
@@ -123,11 +143,11 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("大模型名称")
-			.setDesc("调用的对话模型名称")
+			.setName(i18n.llm_model_name)
+			.setDesc(i18n.llm_model_desc)
 			.addText((text) => {
 				text
-					.setPlaceholder("gpt-4o-mini 或 deepseek-chat")
+					.setPlaceholder("gpt-4o-mini / deepseek-chat")
 					.setValue(this.plugin.settings.llmModelName)
 					.onChange(async (val) => {
 						this.plugin.settings.llmModelName = val.trim();
@@ -136,29 +156,29 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("测试大模型连接")
-			.setDesc("验证大模型 API 地址、密钥及模型是否正常响应")
+			.setName(i18n.test_name)
+			.setDesc(i18n.test_desc)
 			.addButton((btn) => {
-				btn.setButtonText("测试连接").onClick(async () => {
+				btn.setButtonText(i18n.test_btn).onClick(async () => {
 					btn.setDisabled(true);
-					btn.setButtonText("正在连接...");
+					btn.setButtonText(i18n.test_testing);
 					const res = await this.plugin.llmSynthesizer.testConnection();
 					btn.setDisabled(false);
-					btn.setButtonText("测试连接");
+					btn.setButtonText(i18n.test_btn);
 					if (res.success) {
-						new Notice(`✅ ${res.message}`);
+						new Notice(`✅ ${i18n.test_ok}${res.message}`);
 					} else {
-						new Notice(`❌ ${res.message}`, 6000);
+						new Notice(`❌ ${i18n.test_fail}${res.message}`, 6000);
 					}
 				});
 			});
 
-		// Section 3: Indexing and Filtering
-		containerEl.createEl("h3", { text: "3. 笔记扫描与过滤" });
+		// Section 3: Scan Scope
+		containerEl.createEl("h3", { text: i18n.sec_scan });
 
 		new Setting(containerEl)
-			.setName("排除文件夹")
-			.setDesc("多个文件夹以英文逗号分隔，匹配的目录将被跳过")
+			.setName(i18n.ignore_name)
+			.setDesc(i18n.ignore_desc)
 			.addText((text) => {
 				text
 					.setPlaceholder("_templates, _attachments, .obsidian")
@@ -170,8 +190,8 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("单篇笔记最大截取字符")
-			.setDesc("提取正文用于语义分析的前导字符数（推荐 150~250 字符，兼顾宏观主题精度与秒级推理速度）")
+			.setName(i18n.sample_name)
+			.setDesc(i18n.sample_desc)
 			.addText((text) => {
 				text
 					.setValue(String(this.plugin.settings.maxCharsPerNote))
@@ -184,20 +204,20 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// Section 4: Cache Management
-		containerEl.createEl("h3", { text: "4. 缓存与数据管理" });
+		// Section 4: Data Storage
+		containerEl.createEl("h3", { text: i18n.sec_data });
 
 		const cachedCount = this.plugin.cacheManager.size();
 		new Setting(containerEl)
-			.setName("已缓存向量")
-			.setDesc(`当前已增量缓存 ${cachedCount} 篇笔记的嵌入向量。已有缓存的笔记在重新生成时无需重复请求。`)
+			.setName(i18n.cache_name)
+			.setDesc(i18n.cache_desc(cachedCount))
 			.addButton((btn) => {
 				btn
-					.setButtonText("清除所有缓存")
+					.setButtonText(i18n.clear_btn)
 					.setWarning()
 					.onClick(async () => {
 						await this.plugin.cacheManager.clear();
-						new Notice("已成功清空所有向量缓存！下次生成将全量重新计算。");
+						new Notice(i18n.clear_notice);
 						this.display();
 					});
 			});

@@ -1,6 +1,9 @@
 export type EmbeddingMode = "local-path" | "openai-api";
 
+export type LocaleMode = "auto" | "zh" | "en";
+
 export interface KnowledgeMapSettings {
+	locale: LocaleMode;
 	embeddingMode: EmbeddingMode;
 	localModelPath: string;
 	apiBaseUrl: string;
@@ -16,6 +19,7 @@ export interface KnowledgeMapSettings {
 }
 
 export const DEFAULT_SETTINGS: KnowledgeMapSettings = {
+	locale: "auto",
 	embeddingMode: "openai-api",
 	localModelPath: "",
 	apiBaseUrl: "https://api.openai.com/v1",

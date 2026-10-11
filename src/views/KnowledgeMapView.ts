@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, Notice } from "obsidian";
 import { HtmlMapGenerator } from "../services/htmlGenerator";
 import KnowledgeMapPlugin from "../main";
+import { t } from "../i18n";
 
 export const KNOWLEDGE_MAP_VIEW_TYPE = "knowledge-map-view";
 
@@ -111,6 +112,7 @@ export class KnowledgeMapView extends ItemView {
 	}
 
 	showProgress(message: string, current: number, total: number, stageName?: string): void {
+		const i18n = t(this.plugin.settings.locale);
 		this.hideEmptyState();
 		this.progressEl.style.display = "flex";
 		const percent = total > 0 ? Math.round((current / total) * 100) : 0;
@@ -123,10 +125,10 @@ export class KnowledgeMapView extends ItemView {
 				${
 					total > 0
 						? `<div class="knowledge-map-progress-bar"><div class="knowledge-map-progress-fill" style="width: ${percent}%;"></div></div>
-						   <div class="knowledge-map-progress-meta"><span>${current} / ${total} 篇</span><span>${percent}%</span></div>`
+						   <div class="knowledge-map-progress-meta"><span>${current} / ${total} ${i18n.progress_unit}</span><span>${percent}%</span></div>`
 						: ""
 				}
-				<button class="knowledge-map-cancel-btn" id="km-cancel-task">取消任务</button>
+				<button class="knowledge-map-cancel-btn" id="km-cancel-task">${i18n.btn_cancel}</button>
 			</div>
 		`;
 
@@ -141,14 +143,15 @@ export class KnowledgeMapView extends ItemView {
 	}
 
 	showError(message: string): void {
+		const i18n = t(this.plugin.settings.locale);
 		this.hideProgress();
 		this.emptyEl.style.display = "flex";
 		this.emptyEl.innerHTML = `
 			<div class="knowledge-map-empty-content">
 				<div class="knowledge-map-empty-icon">⚠️</div>
-				<h3 style="color: var(--text-error);">生成遇到问题</h3>
+				<h3 style="color: var(--text-error);">${i18n.err_title}</h3>
 				<p style="white-space: pre-wrap; font-size: 12px; color: var(--text-muted); text-align: left; max-height: 160px; overflow-y: auto; background: var(--background-primary); padding: 10px; border-radius: 6px;">${message}</p>
-				<button class="knowledge-map-primary-btn" id="km-retry-scan">重新尝试</button>
+				<button class="knowledge-map-primary-btn" id="km-retry-scan">${i18n.btn_retry}</button>
 			</div>
 		`;
 		const btn = this.emptyEl.querySelector("#km-retry-scan");
@@ -158,12 +161,13 @@ export class KnowledgeMapView extends ItemView {
 	}
 
 	private renderEmptyStateContent(): void {
+		const i18n = t(this.plugin.settings.locale);
 		this.emptyEl.innerHTML = `
 			<div class="knowledge-map-empty-content">
 				<div class="knowledge-map-empty-icon">🗺️</div>
-				<h3>尚未生成知识地貌</h3>
-				<p>点击下方按钮，开始扫描笔记并构建交互式语义地貌地图。</p>
-				<button class="knowledge-map-primary-btn" id="km-start-scan">立即构建地图</button>
+				<h3>${i18n.empty_title}</h3>
+				<p>${i18n.empty_desc}</p>
+				<button class="knowledge-map-primary-btn" id="km-start-scan">${i18n.btn_build}</button>
 			</div>
 		`;
 
@@ -221,7 +225,7 @@ export class KnowledgeMapView extends ItemView {
 		if (basePath) {
 			const fullPath = `${basePath}/${htmlPath}`.replace(/\\/g, "/");
 			window.open(`file:///${fullPath}`);
-			new Notice("已在浏览器中打开知识地图 HTML。");
+			new Notice(t(this.plugin.settings.locale).notice_html_opened);
 		}
 	}
 }

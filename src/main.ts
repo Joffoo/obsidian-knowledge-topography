@@ -8,6 +8,7 @@ import { EmbeddingService } from "./services/embedding";
 import { LLMSynthesizer } from "./services/llm";
 import { SpatialComputer } from "./services/spatial";
 import { HtmlMapGenerator } from "./services/htmlGenerator";
+import { t } from "./i18n";
 
 export default class KnowledgeMapPlugin extends Plugin {
 	settings: KnowledgeMapSettings;
@@ -45,14 +46,14 @@ export default class KnowledgeMapPlugin extends Plugin {
 		);
 
 		// 3. Register Left Ribbon Icon
-		this.addRibbonIcon("map", "打开语义知识地图", () => {
+		this.addRibbonIcon("map", t(this.settings.locale).ribbon_tooltip, () => {
 			this.activateView();
 		});
 
 		// 4. Register Commands
 		this.addCommand({
 			id: "open-knowledge-map",
-			name: "打开语义知识地图",
+			name: t(this.settings.locale).cmd_open,
 			callback: () => {
 				this.activateView();
 			},
@@ -60,7 +61,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 
 		this.addCommand({
 			id: "regenerate-knowledge-map",
-			name: "重新生成知识地图",
+			name: t(this.settings.locale).cmd_rebuild,
 			callback: () => {
 				this.generateMap();
 			},
@@ -252,7 +253,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 			}
 
 			// Generate standalone HTML for disk export (using clean relative path ./plotly.min.js without app:// pollution)
-			const pluginDir = this.manifest.dir || ".obsidian/plugins/knowledge-map";
+			const pluginDir = this.manifest.dir || ".obsidian/plugins/knowledge-topography";
 			const standaloneHtml = HtmlMapGenerator.generate({
 				vaultName: this.app.vault.getName(),
 				initialStyle: this.settings.currentTheme,
