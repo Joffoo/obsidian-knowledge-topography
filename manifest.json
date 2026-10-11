@@ -1,7 +1,7 @@
 {
   "id": "knowledge-topography",
   "name": "Knowledge Topography",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "1.7.2",
   "description": "Interactive semantic topographic contour map for your vault. Explore note density, clusters, and peaks as a living landscape.",
   "author": "Joffoo",
