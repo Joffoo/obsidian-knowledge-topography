@@ -32,6 +32,57 @@ export class EmbeddingService {
 		}
 	}
 
+	async testConnection(): Promise<{ success: boolean; message: string; dim?: number }> {
+		if (this.settings.embeddingMode === "local-path") {
+			const fsModule = (window as any).require ? (window as any).require("fs") : null;
+			if (!fsModule) return { success: false, message: "仅桌面端支持本地文件系统。" };
+			if (!this.settings.localModelPath) return { success: false, message: "请先填写本地模型目录绝对路径。" };
+			if (!fsModule.existsSync(this.settings.localModelPath)) return { success: false, message: `模型路径不存在: ${this.settings.localModelPath}` };
+			return { success: true, message: "本地模型路径有效！" };
+		}
+
+		if (!this.settings.apiBaseUrl) {
+			return { success: false, message: "请填写接口地址 (API Base URL)。" };
+		}
+		if (!this.settings.embeddingModelName) {
+			return { success: false, message: "请填写模型名称 (Model Name)。" };
+		}
+
+		const baseUrl = this.settings.apiBaseUrl.replace(/\/+$/, "");
+		const endpoint = `${baseUrl}/embeddings`;
+
+		try {
+			const headers: Record<string, string> = { "Content-Type": "application/json" };
+			if (this.settings.apiKey) {
+				headers["Authorization"] = `Bearer ${this.settings.apiKey}`;
+			}
+
+			const response = await requestUrl({
+				url: endpoint,
+				method: "POST",
+				headers: headers,
+				body: JSON.stringify({
+					input: ["Ping test"],
+					model: this.settings.embeddingModelName,
+				}),
+			});
+
+			if (response.status !== 200) {
+				return { success: false, message: `HTTP ${response.status}: ${response.text.slice(0, 150)}` };
+			}
+
+			const data = response.json;
+			if (!data || !data.data || !Array.isArray(data.data) || !data.data[0]?.embedding) {
+				return { success: false, message: `返回格式异常: ${JSON.stringify(data).slice(0, 150)}` };
+			}
+
+			const dim = data.data[0].embedding.length;
+			return { success: true, message: `连接成功！向量维度: ${dim}`, dim };
+		} catch (err: any) {
+			return { success: false, message: `连接失败: ${err.message || err}` };
+		}
+	}
+
 	async computeEmbeddings(
 		notes: NoteItem[],
 		onProgress?: EmbeddingProgressCallback

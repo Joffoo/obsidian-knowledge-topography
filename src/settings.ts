@@ -109,6 +109,24 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 				});
 		}
 
+		new Setting(containerEl)
+			.setName(i18n.test_name)
+			.setDesc(i18n.test_desc)
+			.addButton((btn) => {
+				btn.setButtonText(i18n.test_btn).onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText(i18n.test_testing);
+					const res = await this.plugin.embeddingService.testConnection();
+					btn.setDisabled(false);
+					btn.setButtonText(i18n.test_btn);
+					if (res.success) {
+						new Notice(`✅ ${res.message}`);
+					} else {
+						new Notice(`❌ ${res.message}`, 6000);
+					}
+				});
+			});
+
 		// Section 2: Peak Naming
 		containerEl.createEl("h3", { text: i18n.sec_peak });
 		containerEl.createEl("p", {
