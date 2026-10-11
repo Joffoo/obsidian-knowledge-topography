@@ -1,6 +1,6 @@
 # Obsidian Knowledge Topography
 
-[![Release](https://img.shields.io/github/v/release/joeseesun/obsidian-knowledge-topography?style=flat-square)](https://github.com/joeseesun/obsidian-knowledge-topography/releases)
+[![Release](https://img.shields.io/github/v/release/Joffoo/obsidian-knowledge-topography?style=flat-square)](https://github.com/Joffoo/obsidian-knowledge-topography/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Obsidian Downloads](https://img.shields.io/badge/Obsidian-Community%20Plugin-7952b3.svg?style=flat-square)](https://obsidian.md/plugins)
 
@@ -38,10 +38,10 @@
 
 ### Via BRAT
 1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian-4rw-brat).
-2. Add beta plugin: `joeseesun/obsidian-knowledge-topography`.
+2. Add beta plugin: `Joffoo/obsidian-knowledge-topography`.
 
 ### Manual Installation
-1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [GitHub Release](https://github.com/joeseesun/obsidian-knowledge-topography/releases).
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [GitHub Release](https://github.com/Joffoo/obsidian-knowledge-topography/releases).
 2. In your vault, navigate to `.obsidian/plugins/` and create a folder named `knowledge-topography`.
 3. Place the downloaded files inside `.obsidian/plugins/knowledge-topography/`.
 4. Reload Obsidian and enable the plugin in settings.
