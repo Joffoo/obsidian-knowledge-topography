@@ -76,7 +76,8 @@ export default class KnowledgeMapPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const saved = (await this.loadData()) as Record<string, unknown> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved ?? {});
 	}
 
 	async saveSettings(): Promise<void> {
@@ -90,9 +91,9 @@ export default class KnowledgeMapPlugin extends Plugin {
 		try {
 			if (await this.app.vault.adapter.exists(this.stateFilePath)) {
 				const content = await this.app.vault.adapter.read(this.stateFilePath);
-				this.mapData = JSON.parse(content);
+				this.mapData = JSON.parse(content) as MapData;
 			}
-		} catch (e) {
+		} catch (e: unknown) {
 			console.warn("[Knowledge Map] 未能载入历史地图数据:", e);
 		}
 	}
@@ -253,7 +254,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 			}
 
 			// Generate standalone HTML for disk export (using clean relative path ./plotly.min.js without app:// pollution)
-			const pluginDir = this.manifest.dir || ".obsidian/plugins/knowledge-topography";
+			const pluginDir = this.manifest.dir ?? `${this.app.vault.configDir}/plugins/knowledge-topography`;
 			const standaloneHtml = HtmlMapGenerator.generate({
 				vaultName: this.app.vault.getName(),
 				initialStyle: this.settings.currentTheme,
@@ -278,15 +279,17 @@ export default class KnowledgeMapPlugin extends Plugin {
 				await view.render();
 			}
 			new Notice(`✅ 知识地图生成成功！共收录 ${allCached.length} 篇笔记。`);
-		} catch (err: any) {
+		} catch (err: unknown) {
+			const errMsg = err instanceof Error ? err.message : String(err);
 			console.error("[Knowledge Map] 生成地图失败:", err);
 			if (this.statusBarItem) this.statusBarItem.setText("");
-			new Notice(`❌ 生成失败: ${err.message || err}`, 8000);
+			new Notice(`❌ 生成失败: ${errMsg}`, 8000);
 			if (view) {
-				view.showError(err.message || String(err));
+				view.showError(errMsg);
 			}
 		} finally {
 			this.isGenerating = false;
 		}
 	}
 }
+

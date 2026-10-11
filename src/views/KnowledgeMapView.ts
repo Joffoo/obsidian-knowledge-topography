@@ -83,28 +83,29 @@ export class KnowledgeMapView extends ItemView {
 
 	private setupEventListeners(): void {
 		this.messageHandler = (event: MessageEvent) => {
-			if (!event.data) return;
-			if (event.data.type === "km_open_note" && event.data.url) {
+			const data = event.data as Record<string, unknown> | null;
+			if (!data) return;
+			if (data.type === "km_open_note" && typeof data.url === "string") {
 				try {
 					let decodedPath = "";
 					try {
-						const urlObj = new URL(event.data.url);
+						const urlObj = new URL(data.url);
 						const fileParam = urlObj.searchParams.get("file");
 						if (fileParam) decodedPath = decodeURIComponent(fileParam);
 					} catch {
-						const match = event.data.url.match(/file=([^&]+)/);
+						const match = data.url.match(/file=([^&]+)/);
 						if (match) decodedPath = decodeURIComponent(match[1]);
 					}
 
 					if (decodedPath) {
 						void this.app.workspace.openLinkText(decodedPath, "", false);
-						new Notice(`已打开笔记: ${decodedPath.split("/").pop()}`);
+						new Notice(`已打开笔记: ${decodedPath.split("/").pop() ?? ""}`);
 					}
-				} catch (e) {
-					console.warn("[Knowledge Map] 打开笔记失败:", e);
+				} catch (err: unknown) {
+					console.warn("[Knowledge Map] 打开笔记失败:", err);
 				}
-			} else if (event.data.type === "km_theme_change" && event.data.theme) {
-				this.plugin.settings.currentTheme = event.data.theme;
+			} else if (data.type === "km_theme_change" && typeof data.theme === "string") {
+				this.plugin.settings.currentTheme = data.theme;
 				void this.plugin.saveSettings();
 			}
 		};
@@ -212,7 +213,7 @@ export class KnowledgeMapView extends ItemView {
 		const mapData = this.plugin.getMapData();
 		if (!mapData) return;
 
-		const pluginDir = this.plugin.manifest.dir || ".obsidian/plugins/knowledge-topography";
+		const pluginDir = this.plugin.manifest.dir ?? `${this.app.vault.configDir}/plugins/knowledge-topography`;
 		const plotlyPath = `${pluginDir}/plotly.min.js`;
 		let localPlotlyUrl: string | null = null;
 		if (await this.app.vault.adapter.exists(plotlyPath)) {
@@ -230,10 +231,10 @@ export class KnowledgeMapView extends ItemView {
 	}
 
 	openInBrowser(): void {
-		const pluginDir = this.plugin.manifest.dir || ".obsidian/plugins/knowledge-topography";
+		const pluginDir = this.plugin.manifest.dir ?? `${this.app.vault.configDir}/plugins/knowledge-topography`;
 		const htmlPath = `${pluginDir}/knowledge_map.html`;
-		const vaultAdapter = this.app.vault.adapter as any;
-		const basePath = vaultAdapter.basePath || (vaultAdapter.getBasePath ? vaultAdapter.getBasePath() : "");
+		const vaultAdapter = this.app.vault.adapter as { basePath?: string; getBasePath?: () => string };
+		const basePath = vaultAdapter.basePath ?? (vaultAdapter.getBasePath ? vaultAdapter.getBasePath() : "");
 		if (basePath) {
 			const fullPath = `${basePath}/${htmlPath}`.replace(/\\/g, "/");
 			window.open(`file:///${fullPath}`);

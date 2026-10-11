@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import KnowledgeMapPlugin from "./main";
 import { t } from "./i18n";
+import { EmbeddingMode, LocaleMode } from "./types";
 
 export class KnowledgeMapSettingTab extends PluginSettingTab {
 	private plugin: KnowledgeMapPlugin;
@@ -31,7 +32,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 					.addOption("en", i18n.lang_en)
 					.setValue(this.plugin.settings.locale)
 					.onChange(async (val) => {
-						this.plugin.settings.locale = val as any;
+						this.plugin.settings.locale = val as LocaleMode;
 						await this.plugin.saveSettings();
 						this.display(); // Re-render in the new language
 					});
@@ -49,7 +50,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 					.addOption("local-path", i18n.opt_local)
 					.setValue(this.plugin.settings.embeddingMode)
 					.onChange(async (val) => {
-						this.plugin.settings.embeddingMode = val as any;
+						this.plugin.settings.embeddingMode = val as EmbeddingMode;
 						await this.plugin.saveSettings();
 						this.display();
 					});
@@ -198,7 +199,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			.setDesc(i18n.ignore_desc)
 			.addText((text) => {
 				text
-					.setPlaceholder("_templates, _attachments, .obsidian")
+					.setPlaceholder("_templates, _attachments")
 					.setValue(this.plugin.settings.excludedFolders)
 					.onChange(async (val) => {
 						this.plugin.settings.excludedFolders = val;

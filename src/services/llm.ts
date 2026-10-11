@@ -13,6 +13,15 @@ export interface ClusterSample {
 	coreNotes: NoteRepresentative[];
 }
 
+interface DomainItem {
+	id: number;
+	domain: unknown;
+}
+
+interface ChatResponse {
+	choices?: { message?: { content?: string } }[];
+}
+
 export class LLMSynthesizer {
 	private settings: KnowledgeMapSettings;
 
@@ -37,7 +46,7 @@ export class LLMSynthesizer {
 			}
 
 			const timeoutPromise = new Promise<never>((_, reject) =>
-				setTimeout(() => reject(new Error("连接超时 (10s)")), 10000)
+				window.setTimeout(() => reject(new Error("连接超时 (10s)")), 10000)
 			);
 
 			const fetchPromise = requestUrl({
@@ -57,7 +66,8 @@ export class LLMSynthesizer {
 			const response = await Promise.race([fetchPromise, timeoutPromise]);
 
 			if (response.status === 200) {
-				const content = response.json?.choices?.[0]?.message?.content || "";
+				const data = response.json as ChatResponse | null;
+				const content = data?.choices?.[0]?.message?.content ?? "";
 				return { success: true, message: `连接成功！模型响应: ${content.trim()}` };
 			} else {
 				return {
@@ -65,8 +75,9 @@ export class LLMSynthesizer {
 					message: `HTTP ${response.status}: ${response.text.slice(0, 200)}`,
 				};
 			}
-		} catch (err: any) {
-			return { success: false, message: `连接失败: ${err.message || err}` };
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			return { success: false, message: `连接失败: ${msg}` };
 		}
 	}
 
@@ -103,8 +114,8 @@ export class LLMSynthesizer {
 
 【严格命名规则】
 1. 字符长度：严格限制为 2 ~ 4 个中文字符的名词短语（严禁超过 4 个字符）。
-2. 信息密度：必须是具体的学科、技术栈、生活门类或核心研究领域（例如：“认知哲学”、“量化投资”、“大模型算法”、“手冲咖啡”、“系统设计”）。
-3. 负面约束：严禁输出模糊无信息量的废话词（如“综合杂项”、“其他笔记”、“个人思考”、“日常随笔”、“读书摘抄”等）。
+2. 信息密度：必须是具体的学科、技术栈、生活门类或核心研究领域（例如："认知哲学"、"量化投资"、"大模型算法"、"手冲咖啡"、"系统设计"）。
+3. 负面约束：严禁输出模糊无信息量的废话词（如"综合杂项"、"其他笔记"、"个人思考"、"日常随笔"、"读书摘抄"等）。
 4. 输出格式：严禁任何多余解释与客套话，必须输出严格合法的 JSON 数组格式。
 
 【示例】
@@ -133,7 +144,7 @@ ${clusterDescriptions}
 
 			// 15-second timeout safeguard to prevent hanging
 			const timeoutPromise = new Promise<never>((_, reject) =>
-				setTimeout(() => reject(new Error("LLM API 响应超时 (15s)")), 15000)
+				window.setTimeout(() => reject(new Error("LLM API 响应超时 (15s)")), 15000)
 			);
 
 			const fetchPromise = requestUrl({
@@ -156,13 +167,14 @@ ${clusterDescriptions}
 				throw new Error(`LLM API 返回错误代码 ${response.status}`);
 			}
 
-			let content = response.json?.choices?.[0]?.message?.content || "";
+			const data = response.json as ChatResponse | null;
+			let content = data?.choices?.[0]?.message?.content ?? "";
 			// Strip markdown code block markers
 			content = content.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
 
 			const jsonMatch = content.match(/\[[\s\S]*\]/);
 			if (jsonMatch) {
-				const parsed = JSON.parse(jsonMatch[0]);
+				const parsed = JSON.parse(jsonMatch[0]) as DomainItem[];
 				for (const item of parsed) {
 					if (typeof item.id === "number" && item.domain) {
 						let domain = String(item.domain).trim();
@@ -171,7 +183,7 @@ ${clusterDescriptions}
 					}
 				}
 			}
-		} catch (err) {
+		} catch (err: unknown) {
 			console.warn("[Knowledge Map] LLM 总结失败或超时，自动启用高质量本地先验降级:", err);
 		}
 

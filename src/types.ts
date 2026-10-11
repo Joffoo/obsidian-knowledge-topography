@@ -28,7 +28,7 @@ export const DEFAULT_SETTINGS: KnowledgeMapSettings = {
 	llmBaseUrl: "https://api.openai.com/v1",
 	llmApiKey: "",
 	llmModelName: "gpt-4o-mini",
-	excludedFolders: "_templates, _attachments, .obsidian, .trash, .git",
+	excludedFolders: "_templates, _attachments, .trash, .git",
 	currentTheme: "shanshui",
 	maxCharsPerNote: 200,
 	contourLevels: 32,

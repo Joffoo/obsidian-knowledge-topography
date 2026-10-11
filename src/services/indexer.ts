@@ -55,7 +55,7 @@ export class VaultIndexer {
 				}
 			}
 			if (fileCache?.frontmatter?.tags) {
-				const fmTags = fileCache.frontmatter.tags;
+				const fmTags: unknown = fileCache.frontmatter.tags;
 				if (Array.isArray(fmTags)) {
 					for (const t of fmTags) rawTags.push(String(t));
 				} else if (typeof fmTags === "string") {

@@ -60,7 +60,7 @@ export class SpatialComputer {
 		const gridH = 160;
 
 		const densityGrid: number[][] = Array.from({ length: gridH }, () =>
-			new Array(gridW).fill(0)
+			new Array<number>(gridW).fill(0)
 		);
 
 		// Adaptive bandwidth estimate: fine enough to preserve cluster peaks, smooth enough for contours
