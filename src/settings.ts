@@ -18,7 +18,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 		const i18n = t(this.plugin.settings.locale);
 
 		// Header
-		containerEl.createEl("h2", { text: i18n.settings_title });
+		new Setting(containerEl).setName(i18n.settings_title).setHeading();
 
 		// Language Selector
 		new Setting(containerEl)
@@ -38,7 +38,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		// Section 1: Topography Engine
-		containerEl.createEl("h3", { text: i18n.sec_engine });
+		new Setting(containerEl).setName(i18n.sec_engine).setHeading();
 
 		new Setting(containerEl)
 			.setName(i18n.mode_name)
@@ -128,11 +128,10 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		// Section 2: Peak Naming
-		containerEl.createEl("h3", { text: i18n.sec_peak });
-		containerEl.createEl("p", {
-			text: i18n.sec_peak_desc,
-			cls: "setting-item-description",
-		});
+		new Setting(containerEl)
+			.setName(i18n.sec_peak)
+			.setDesc(i18n.sec_peak_desc)
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName(i18n.llm_url_name)
@@ -192,7 +191,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		// Section 3: Scan Scope
-		containerEl.createEl("h3", { text: i18n.sec_scan });
+		new Setting(containerEl).setName(i18n.sec_scan).setHeading();
 
 		new Setting(containerEl)
 			.setName(i18n.ignore_name)
@@ -223,7 +222,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			});
 
 		// Section 4: Data Storage
-		containerEl.createEl("h3", { text: i18n.sec_data });
+		new Setting(containerEl).setName(i18n.sec_data).setHeading();
 
 		const cachedCount = this.plugin.cacheManager.size();
 		new Setting(containerEl)
@@ -232,7 +231,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			.addButton((btn) => {
 				btn
 					.setButtonText(i18n.clear_btn)
-					.setWarning()
+					.setDestructive()
 					.onClick(async () => {
 						await this.plugin.cacheManager.clear();
 						new Notice(i18n.clear_notice);

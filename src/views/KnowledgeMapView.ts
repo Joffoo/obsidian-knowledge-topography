@@ -57,9 +57,8 @@ export class KnowledgeMapView extends ItemView {
 
 		// 2. Create Progress Overlay
 		this.progressEl = this.container.createDiv({
-			cls: "knowledge-map-progress-overlay",
+			cls: "knowledge-map-progress-overlay km-hidden",
 		});
-		this.progressEl.style.display = "none";
 
 		// 3. Create Empty State Container
 		this.emptyEl = this.container.createDiv({
@@ -92,7 +91,7 @@ export class KnowledgeMapView extends ItemView {
 						const urlObj = new URL(event.data.url);
 						const fileParam = urlObj.searchParams.get("file");
 						if (fileParam) decodedPath = decodeURIComponent(fileParam);
-					} catch (urlErr) {
+					} catch {
 						const match = event.data.url.match(/file=([^&]+)/);
 						if (match) decodedPath = decodeURIComponent(match[1]);
 					}
@@ -116,76 +115,87 @@ export class KnowledgeMapView extends ItemView {
 	showProgress(message: string, current: number, total: number, stageName?: string): void {
 		const i18n = t(this.plugin.settings.locale);
 		this.hideEmptyState();
-		this.progressEl.style.display = "flex";
-		const percent = total > 0 ? Math.round((current / total) * 100) : 0;
-		const stageLabel = stageName ? `<div class="knowledge-map-progress-stage">${stageName}</div>` : "";
-		this.progressEl.innerHTML = `
-			<div class="knowledge-map-progress-box">
-				<div class="knowledge-map-spinner"></div>
-				${stageLabel}
-				<div class="knowledge-map-progress-text">${message}</div>
-				${
-					total > 0
-						? `<div class="knowledge-map-progress-bar"><div class="knowledge-map-progress-fill" style="width: ${percent}%;"></div></div>
-						   <div class="knowledge-map-progress-meta"><span>${current} / ${total} ${i18n.progress_unit}</span><span>${percent}%</span></div>`
-						: ""
-				}
-				<button class="knowledge-map-cancel-btn" id="km-cancel-task">${i18n.btn_cancel}</button>
-			</div>
-		`;
+		this.progressEl.removeClass("km-hidden");
+		this.progressEl.empty();
 
-		const cancelBtn = this.progressEl.querySelector("#km-cancel-task");
-		cancelBtn?.addEventListener("click", () => {
+		const box = this.progressEl.createDiv({ cls: "knowledge-map-progress-box" });
+		box.createDiv({ cls: "knowledge-map-spinner" });
+
+		if (stageName) {
+			box.createDiv({ cls: "knowledge-map-progress-stage", text: stageName });
+		}
+
+		box.createDiv({ cls: "knowledge-map-progress-text", text: message });
+
+		if (total > 0) {
+			const percent = Math.round((current / total) * 100);
+			const bar = box.createDiv({ cls: "knowledge-map-progress-bar" });
+			const fill = bar.createDiv({ cls: "knowledge-map-progress-fill" });
+			fill.setCssStyles({ width: `${percent}%` });
+
+			const meta = box.createDiv({ cls: "knowledge-map-progress-meta" });
+			meta.createSpan({ text: `${current} / ${total} ${i18n.progress_unit}` });
+			meta.createSpan({ text: `${percent}%` });
+		}
+
+		const cancelBtn = box.createEl("button", {
+			cls: "knowledge-map-cancel-btn",
+			text: i18n.btn_cancel,
+		});
+		cancelBtn.addEventListener("click", () => {
 			this.plugin.cancelGeneration();
 		});
 	}
 
 	hideProgress(): void {
-		this.progressEl.style.display = "none";
+		this.progressEl.addClass("km-hidden");
 	}
 
 	showError(message: string): void {
 		const i18n = t(this.plugin.settings.locale);
 		this.hideProgress();
-		this.emptyEl.style.display = "flex";
-		this.emptyEl.innerHTML = `
-			<div class="knowledge-map-empty-content">
-				<div class="knowledge-map-empty-icon">⚠️</div>
-				<h3 style="color: var(--text-error);">${i18n.err_title}</h3>
-				<p style="white-space: pre-wrap; font-size: 12px; color: var(--text-muted); text-align: left; max-height: 160px; overflow-y: auto; background: var(--background-primary); padding: 10px; border-radius: 6px;">${message}</p>
-				<button class="knowledge-map-primary-btn" id="km-retry-scan">${i18n.btn_retry}</button>
-			</div>
-		`;
-		const btn = this.emptyEl.querySelector("#km-retry-scan");
-		btn?.addEventListener("click", async () => {
+		this.emptyEl.removeClass("km-hidden");
+		this.emptyEl.empty();
+
+		const content = this.emptyEl.createDiv({ cls: "knowledge-map-empty-content" });
+		content.createDiv({ cls: "knowledge-map-empty-icon", text: "⚠️" });
+		content.createEl("h3", { cls: "knowledge-map-error-title", text: i18n.err_title });
+		content.createEl("p", { cls: "knowledge-map-error-msg", text: message });
+
+		const retryBtn = content.createEl("button", {
+			cls: "knowledge-map-primary-btn",
+			text: i18n.btn_retry,
+		});
+		retryBtn.addEventListener("click", async () => {
 			await this.plugin.generateMap();
 		});
 	}
 
 	private renderEmptyStateContent(): void {
 		const i18n = t(this.plugin.settings.locale);
-		this.emptyEl.innerHTML = `
-			<div class="knowledge-map-empty-content">
-				<div class="knowledge-map-empty-icon">🗺️</div>
-				<h3>${i18n.empty_title}</h3>
-				<p>${i18n.empty_desc}</p>
-				<button class="knowledge-map-primary-btn" id="km-start-scan">${i18n.btn_build}</button>
-			</div>
-		`;
+		this.emptyEl.empty();
 
-		const btn = this.emptyEl.querySelector("#km-start-scan");
-		btn?.addEventListener("click", async () => {
+		const content = this.emptyEl.createDiv({ cls: "knowledge-map-empty-content" });
+		content.createDiv({ cls: "knowledge-map-empty-icon", text: "🗺️" });
+		content.createEl("h3", { text: i18n.empty_title });
+		content.createEl("p", { text: i18n.empty_desc });
+
+		const btn = content.createEl("button", {
+			cls: "knowledge-map-primary-btn",
+			text: i18n.btn_build,
+		});
+		btn.addEventListener("click", async () => {
 			await this.plugin.generateMap();
 		});
 	}
 
 	showEmptyState(): void {
 		this.renderEmptyStateContent();
-		this.emptyEl.style.display = "flex";
+		this.emptyEl.removeClass("km-hidden");
 	}
 
 	hideEmptyState(): void {
-		this.emptyEl.style.display = "none";
+		this.emptyEl.addClass("km-hidden");
 	}
 
 	private async checkAndRender(): Promise<void> {

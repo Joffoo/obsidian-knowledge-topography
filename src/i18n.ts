@@ -1,19 +1,17 @@
+import { getLanguage } from "obsidian";
 import { LocaleMode } from "./types";
 
 export function resolveLocale(mode: LocaleMode): "zh" | "en" {
 	if (mode === "zh") return "zh";
 	if (mode === "en") return "en";
 
-	// Auto detection from Obsidian / Browser environment
+	// Auto detection from Obsidian environment
 	try {
-		const obLang = window.localStorage.getItem("language");
-		if (obLang && obLang.toLowerCase().startsWith("zh")) return "zh";
-
-		const momentLocale = (window as any).moment?.locale?.();
-		if (momentLocale && momentLocale.toLowerCase().startsWith("zh")) return "zh";
-
-		if (navigator.language && navigator.language.toLowerCase().startsWith("zh")) return "zh";
-	} catch (e) {
+		const lang = getLanguage();
+		if (typeof lang === "string" && lang.toLowerCase().startsWith("zh")) {
+			return "zh";
+		}
+	} catch {
 		// Fallback
 	}
 	return "en";
@@ -170,5 +168,5 @@ export type TranslationMap = typeof STRINGS.zh;
 
 export function t(mode: LocaleMode): TranslationMap {
 	const locale = resolveLocale(mode);
-	return (STRINGS[locale] || STRINGS.en) as TranslationMap;
+	return STRINGS[locale] || STRINGS.en;
 }

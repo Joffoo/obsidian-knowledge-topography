@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, Notice } from "obsidian";
+import { Plugin, Notice } from "obsidian";
 import { DEFAULT_SETTINGS, KnowledgeMapSettings, MapData, NoteItem } from "./types";
 import { KnowledgeMapSettingTab } from "./settings";
 import { KnowledgeMapView, KNOWLEDGE_MAP_VIEW_TYPE } from "./views/KnowledgeMapView";
@@ -71,8 +71,8 @@ export default class KnowledgeMapPlugin extends Plugin {
 		this.addSettingTab(new KnowledgeMapSettingTab(this.app, this));
 	}
 
-	async onunload(): Promise<void> {
-		this.app.workspace.detachLeavesOfType(KNOWLEDGE_MAP_VIEW_TYPE);
+	onunload(): void {
+		// Do not detach leaves in onunload per official Obsidian review guidelines
 	}
 
 	async loadSettings(): Promise<void> {
