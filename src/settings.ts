@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, TFolder, TextComponent, SliderComponent } from "obsidian";
 import KnowledgeMapPlugin from "./main";
 import { t } from "./i18n";
 import { EmbeddingMode, LocaleMode } from "./types";
@@ -199,7 +199,7 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 			.setDesc(i18n.ignore_desc)
 			.addText((text) => {
 				text
-					.setPlaceholder("_templates, _attachments")
+					.setPlaceholder(i18n.ignore_holder)
 					.setValue(this.plugin.settings.excludedFolders)
 					.onChange(async (val) => {
 						this.plugin.settings.excludedFolders = val;
@@ -207,17 +207,78 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 					});
 			});
 
+		// Quick folder selector from the current vault
+		const allFolders = this.app.vault
+			.getAllLoadedFiles()
+			.filter((f): f is TFolder => f instanceof TFolder && f.path !== "/")
+			.map((f) => f.path)
+			.sort((a, b) => a.localeCompare(b));
+
+		if (allFolders.length > 0) {
+			let selectedFolder = allFolders[0];
+			new Setting(containerEl)
+				.setName(i18n.ignore_quick_add_name)
+				.setDesc(i18n.ignore_quick_add_desc)
+				.addDropdown((dropdown) => {
+					for (const folder of allFolders) {
+						dropdown.addOption(folder, folder);
+					}
+					dropdown.setValue(selectedFolder);
+					dropdown.onChange((val) => {
+						selectedFolder = val;
+					});
+				})
+				.addButton((btn) => {
+					btn.setButtonText(i18n.ignore_quick_add_btn).onClick(async () => {
+						const current = this.plugin.settings.excludedFolders
+							.split(/[,，\n]+/)
+							.map((s) => s.trim().replace(/^\/+|\/+$/g, ""))
+							.filter(Boolean);
+						if (!current.includes(selectedFolder)) {
+							current.push(selectedFolder);
+							this.plugin.settings.excludedFolders = current.join(", ");
+							await this.plugin.saveSettings();
+							new Notice(`${i18n.ignore_added_notice}: ${selectedFolder}`);
+							this.display();
+						} else {
+							new Notice(`${selectedFolder} ${i18n.ignore_already_exists}`);
+						}
+					});
+				});
+		}
+
+		let sampleTextComponent: TextComponent | null = null;
+		let sampleSliderComponent: SliderComponent | null = null;
+
 		new Setting(containerEl)
 			.setName(i18n.sample_name)
 			.setDesc(i18n.sample_desc)
+			.addSlider((slider) => {
+				sampleSliderComponent = slider;
+				slider
+					.setLimits(100, 2000, 50)
+					.setValue(Math.min(2000, Math.max(100, this.plugin.settings.maxCharsPerNote)))
+					.setDynamicTooltip()
+					.onChange(async (val) => {
+						this.plugin.settings.maxCharsPerNote = val;
+						await this.plugin.saveSettings();
+						if (sampleTextComponent) {
+							sampleTextComponent.setValue(String(val));
+						}
+					});
+			})
 			.addText((text) => {
+				sampleTextComponent = text;
 				text
 					.setValue(String(this.plugin.settings.maxCharsPerNote))
 					.onChange(async (val) => {
 						const num = parseInt(val);
-						if (!isNaN(num) && num >= 50) {
+						if (!isNaN(num) && num >= 50 && num <= 5000) {
 							this.plugin.settings.maxCharsPerNote = num;
 							await this.plugin.saveSettings();
+							if (sampleSliderComponent && num <= 2000) {
+								sampleSliderComponent.setValue(Math.max(100, num));
+							}
 						}
 					});
 			});

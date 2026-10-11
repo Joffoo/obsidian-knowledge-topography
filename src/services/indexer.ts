@@ -19,8 +19,8 @@ export class VaultIndexer {
 	): Promise<NoteItem[]> {
 		const files = this.app.vault.getMarkdownFiles();
 		const excludedList = this.settings.excludedFolders
-			.split(",")
-			.map((s) => s.trim())
+			.split(/[,，\n\r]+/)
+			.map((s) => s.trim().replace(/^\/+|\/+$/g, ""))
 			.filter((s) => s.length > 0);
 
 		const result: NoteItem[] = [];
@@ -87,8 +87,10 @@ export class VaultIndexer {
 	}
 
 	private isExcluded(path: string, excludedList: string[]): boolean {
+		const cleanPath = path.replace(/^\/+/, "");
 		for (const ex of excludedList) {
-			if (path === ex || path.startsWith(ex + "/") || path.includes("/" + ex + "/")) {
+			if (!ex) continue;
+			if (cleanPath === ex || cleanPath.startsWith(ex + "/") || cleanPath.includes("/" + ex + "/")) {
 				return true;
 			}
 		}

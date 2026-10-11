@@ -62,9 +62,15 @@ export const STRINGS = {
 		// Section 3
 		sec_scan: "扫描范围",
 		ignore_name: "忽略目录",
-		ignore_desc: "不参与构建的文件夹，用逗号分隔。",
+		ignore_desc: "不参与构建的文件夹，用逗号分隔（如：Templates, Attachments）。",
+		ignore_holder: "如：Templates, Attachments",
+		ignore_quick_add_name: "快速添加库中目录",
+		ignore_quick_add_desc: "从当前笔记库中选择文件夹并一键追加到排除名单。",
+		ignore_quick_add_btn: "添加排除",
+		ignore_added_notice: "已添加排除目录",
+		ignore_already_exists: "已在排除列表中",
 		sample_name: "采样字数",
-		sample_desc: "每篇笔记前序字数，推荐 150–250。",
+		sample_desc: "每篇笔记前序采样字数，推荐 500–1000。字数越多语义越丰富，但计算耗时略增。",
 
 		// Section 4
 		sec_data: "数据存储",
@@ -134,9 +140,15 @@ export const STRINGS = {
 		// Section 3
 		sec_scan: "Scan Scope",
 		ignore_name: "Ignore Folders",
-		ignore_desc: "Folders to skip, separated by commas.",
+		ignore_desc: "Folders to skip, separated by commas (e.g. Templates, Attachments).",
+		ignore_holder: "e.g. Templates, Attachments",
+		ignore_quick_add_name: "Quick Add from Vault",
+		ignore_quick_add_desc: "Pick an existing folder from your vault to append to excluded list.",
+		ignore_quick_add_btn: "Add",
+		ignore_added_notice: "Added to excluded folders",
+		ignore_already_exists: "is already in the list",
 		sample_name: "Sample Size",
-		sample_desc: "Characters sampled per note (150–250).",
+		sample_desc: "Characters sampled per note (recommended 500–1000). Higher values capture richer semantics.",
 
 		// Section 4
 		sec_data: "Data Storage",
