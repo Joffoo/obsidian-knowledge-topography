@@ -4,6 +4,7 @@ package-lock.json.bak
 
 # Build outputs
 *.local.*
+release-assets/
 
 # Obsidian Plugin Runtime States & User Privacy Data (CRITICAL REDLINE)
 data.json
