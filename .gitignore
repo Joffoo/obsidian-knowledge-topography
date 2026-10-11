@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+package-lock.json.bak
+
+# Build outputs
+*.local.*
+
+# Obsidian Plugin Runtime States & User Privacy Data (CRITICAL REDLINE)
+data.json
+cache.json
+map_state.json
+knowledge_map.html
+*.tmp_*
+.tmp_*
+
+# OS and Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+.env*
