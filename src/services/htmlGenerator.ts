@@ -239,7 +239,7 @@ export class HtmlMapGenerator {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${vaultName} | Knowledge Map</title>
+    <title>${vaultName} | Knowledge Topography</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;700&family=JetBrains+Mono:wght@300;500&family=Noto+Serif+SC:wght@300;600&family=Songti+SC&family=STSong&display=swap" rel="stylesheet">
     ${plotlyScriptTag}
     <style>

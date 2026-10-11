@@ -23,7 +23,7 @@ export class KnowledgeMapView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "语义知识地图";
+		return t(this.plugin.settings.locale).settings_title;
 	}
 
 	getIcon(): string {
@@ -35,12 +35,14 @@ export class KnowledgeMapView extends ItemView {
 		this.container.empty();
 		this.container.addClass("knowledge-map-container");
 
+		const i18n = t(this.plugin.settings.locale);
+
 		// Header Actions (Native Obsidian Icons)
-		this.addAction("refresh-cw", "重新生成知识地图", async () => {
+		this.addAction("refresh-cw", i18n.cmd_rebuild, async () => {
 			await this.plugin.generateMap();
 		});
 
-		this.addAction("external-link", "在外部浏览器中打开 HTML", () => {
+		this.addAction("external-link", this.plugin.settings.locale === "en" ? "Open in Browser" : "在浏览器中打开", () => {
 			this.openInBrowser();
 		});
 
