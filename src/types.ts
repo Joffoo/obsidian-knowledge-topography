@@ -16,6 +16,7 @@ export interface KnowledgeMapSettings {
 	currentTheme: string;
 	maxCharsPerNote: number;
 	contourLevels: number;
+	autoLocateActiveNote: boolean;
 }
 
 export const DEFAULT_SETTINGS: KnowledgeMapSettings = {
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: KnowledgeMapSettings = {
 	currentTheme: "shanshui",
 	maxCharsPerNote: 600,
 	contourLevels: 32,
+	autoLocateActiveNote: true,
 };
 
 export interface NoteItem {

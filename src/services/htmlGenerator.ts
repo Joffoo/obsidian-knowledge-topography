@@ -161,7 +161,7 @@ export class HtmlMapGenerator {
 			},
 			margin: { l: 0, r: 0, t: 0, b: 0 },
 			clickmode: "event",
-			dragmode: false,
+			dragmode: "pan",
 			hoverlabel: {
 				bgcolor: hoverBg,
 				bordercolor: hoverBorder,
@@ -233,6 +233,25 @@ export class HtmlMapGenerator {
 		const themesDataJson = JSON.stringify(runtimeThemes);
 		const initialDataJson = JSON.stringify(traces);
 		const initialLayoutJson = JSON.stringify(layout);
+		const allPointsJson = JSON.stringify(
+			mapData.points.map((p) => ({
+				path: p.path,
+				title: p.title,
+				folder: p.folder,
+				x: p.x,
+				y: p.y,
+				clusterId: p.clusterId,
+			}))
+		);
+		const clustersSummaryJson = JSON.stringify(
+			mapData.clusters.map((c) => ({
+				id: c.id,
+				domain: c.domain,
+				x: c.x,
+				y: c.y,
+			}))
+		);
+		const gridBoundsJson = JSON.stringify(mapData.gridBounds || [-0.15, 1.15]);
 
 		return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -296,13 +315,38 @@ export class HtmlMapGenerator {
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)"};
             border-radius: 30px;
-            padding: 6px 14px 6px 12px;
+            padding: 5px 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
         }
         #style-switcher-capsule:hover {
             box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
             transform: translateY(-1px);
+        }
+        .capsule-btn {
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            padding: 2px 4px;
+            opacity: 0.75;
+            color: inherit;
+            border-radius: 4px;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .capsule-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        .capsule-divider {
+            width: 1px;
+            height: 14px;
+            background: ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.15)"};
+            margin: 0 2px;
         }
         .capsule-icon {
             font-size: 14px;
@@ -367,6 +411,126 @@ export class HtmlMapGenerator {
             margin-left: 2px;
             text-shadow: ${isDark ? "0 1px 4px rgba(0,0,0,0.8)" : "0 1px 2px rgba(255,255,255,0.8)"};
         }
+
+        /* Radar Probe HUD Card */
+        #radar-hud {
+            position: absolute;
+            bottom: 30px;
+            left: 36px;
+            z-index: 1000;
+            max-width: 340px;
+            background: ${isDark ? "rgba(18, 18, 24, 0.88)" : "rgba(255, 255, 255, 0.92)"};
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)"};
+            border-radius: 16px;
+            padding: 14px 18px;
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+            font-size: 12px;
+            color: ${isDark ? "#E0E0E0" : theme.inkColor};
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(8px);
+            opacity: 0;
+            pointer-events: auto;
+        }
+        #radar-hud.active {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .hud-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"};
+            padding-bottom: 8px;
+        }
+        .hud-header-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .hud-close-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: inherit;
+            opacity: 0.6;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .hud-close-btn:hover {
+            opacity: 1;
+            background: ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)"};
+        }
+        .hud-body {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            line-height: 1.5;
+        }
+        .hud-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .hud-label {
+            font-size: 11px;
+            opacity: 0.65;
+            flex-shrink: 0;
+        }
+        .hud-value {
+            font-weight: 600;
+            color: ${theme.accentColor};
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .hud-neighbors-list {
+            margin-top: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hud-neighbor-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: ${isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)"};
+            border-radius: 6px;
+            padding: 5px 8px;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.15s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        .hud-neighbor-item:hover {
+            background: ${isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.07)"};
+            transform: translateX(2px);
+        }
+        .hud-neighbor-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 11px;
+            max-width: 220px;
+        }
+        .hud-neighbor-dist {
+            font-size: 10px;
+            opacity: 0.5;
+            font-family: monospace;
+            margin-left: 6px;
+        }
     </style>
     <style id="theme-custom-style">
         ${theme.htmlCustomCss}
@@ -379,10 +543,33 @@ export class HtmlMapGenerator {
     </div>
 
     <div id="style-switcher-capsule">
+        <button id="reset-view-btn" class="capsule-btn" title="回归全貌视图 (Reset Overview)">⟲</button>
+        <div class="capsule-divider"></div>
         <span class="capsule-icon">🧭</span>
         <select id="style-select" title="切换地貌视觉风格">
             ${styleOptionsHtml}
         </select>
+    </div>
+
+    <!-- Radar HUD Card -->
+    <div id="radar-hud">
+        <div class="hud-header">
+            <div class="hud-header-title">
+                <span>📍</span>
+                <span id="hud-note-title">--</span>
+            </div>
+            <button class="hud-close-btn" id="hud-close" title="关闭探针卡片">✕</button>
+        </div>
+        <div class="hud-body">
+            <div class="hud-row">
+                <span class="hud-label">所属山峰:</span>
+                <span class="hud-value" id="hud-peak-domain">--</span>
+            </div>
+            <div>
+                <div class="hud-label" style="margin-bottom: 3px;">语义近邻:</div>
+                <div class="hud-neighbors-list" id="hud-neighbors"></div>
+            </div>
+        </div>
     </div>
 
     <div id="main-stage">
@@ -395,6 +582,9 @@ export class HtmlMapGenerator {
         const THEMES_DATA = ${themesDataJson};
         const PEAKS_DATA = ${peaksDataJson};
         const THEMES_LABELS = ${themesLabelsJson};
+        const ALL_POINTS = ${allPointsJson};
+        const CLUSTERS_DATA = ${clustersSummaryJson};
+        const GRID_BOUNDS = ${gridBoundsJson};
         const UNIQUE_FOLDERS_COUNT = ${uniqueFolders.length};
 
         function applyTheme(styleKey) {
@@ -425,6 +615,10 @@ export class HtmlMapGenerator {
                 capsule.style.background = isDark ? 'rgba(20, 20, 25, 0.7)' : 'rgba(255, 255, 255, 0.85)';
                 capsule.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)';
                 selectEl.style.color = isDark ? '#FFFFFF' : theme.ink_color;
+                const divider = capsule.querySelector('.capsule-divider');
+                if (divider) divider.style.background = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
+                const resetBtnEl = document.getElementById('reset-view-btn');
+                if (resetBtnEl) resetBtnEl.style.color = isDark ? '#FFFFFF' : theme.ink_color;
             }
 
             // 4. Update dynamic custom CSS
@@ -571,6 +765,173 @@ export class HtmlMapGenerator {
                 if (savedStyle && THEMES_DATA[savedStyle] && savedStyle !== INITIAL_STYLE) {
                     if (selectEl) selectEl.value = savedStyle;
                     applyTheme(savedStyle);
+                }
+
+                // Close HUD handler
+                const hudEl = document.getElementById('radar-hud');
+                const hudCloseBtn = document.getElementById('hud-close');
+                if (hudCloseBtn && hudEl) {
+                    hudCloseBtn.addEventListener('click', function() {
+                        hudEl.classList.remove('active');
+                        // Remove radar probe trace if exists
+                        removeRadarTrace(plotEl);
+                    });
+                }
+
+                // Reset Overview Viewport (回归全貌视图)
+                function resetOverviewView() {
+                    if (!plotEl) return;
+                    removeRadarTrace(plotEl);
+                    if (hudEl) hudEl.classList.remove('active');
+                    const bMin = GRID_BOUNDS[0];
+                    const bMax = GRID_BOUNDS[1];
+                    Plotly.relayout(plotEl, {
+                        'xaxis.range': [bMin, bMax],
+                        'yaxis.range': [bMin, bMax]
+                    });
+                }
+
+                const resetBtn = document.getElementById('reset-view-btn');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', resetOverviewView);
+                }
+
+                // Double-click on blank stage to reset view
+                plotEl.on('plotly_doubleclick', function() {
+                    resetOverviewView();
+                });
+
+                // Handle Locate Note messages (from Obsidian active leaf change or command)
+                window.addEventListener('message', function(event) {
+                    const data = event.data;
+                    if (!data || data.type !== 'km_locate_note' || !data.path) return;
+                    locateNoteOnMap(data.path);
+                });
+
+                function removeRadarTrace(plotEl) {
+                    if (!plotEl || !plotEl.data) return;
+                    const existingIdx = plotEl.data.findIndex(t => t.name === '__radar_probe__');
+                    if (existingIdx !== -1) {
+                        Plotly.deleteTraces(plotEl, existingIdx);
+                    }
+                }
+
+                function locateNoteOnMap(targetPath) {
+                    if (!plotEl || !ALL_POINTS || ALL_POINTS.length === 0) return;
+                    const cleanTarget = targetPath.split('\\\\').join('/');
+                    const pt = ALL_POINTS.find(p => p.path.split('\\\\').join('/') === cleanTarget);
+                    if (!pt) {
+                        console.warn('[Knowledge Topography] Note not found on map:', targetPath);
+                        return;
+                    }
+
+                    // 1. Pan Plotly camera with smooth range transition
+                    const span = 0.28;
+                    Plotly.relayout(plotEl, {
+                        'xaxis.range': [pt.x - span, pt.x + span],
+                        'yaxis.range': [pt.y - span, pt.y + span]
+                    });
+
+                    // 2. Add / Update Radar Probe Trace
+                    removeRadarTrace(plotEl);
+                    const currentStyleKey = (selectEl ? selectEl.value : null) || INITIAL_STYLE;
+                    const curTheme = THEMES_DATA[currentStyleKey] || THEMES_DATA['shanshui'];
+                    const accentColor = curTheme.accent_color || '#D9534F';
+
+                    const radarTrace = {
+                        name: '__radar_probe__',
+                        type: 'scatter',
+                        x: [pt.x, pt.x],
+                        y: [pt.y, pt.y],
+                        mode: 'markers',
+                        showlegend: false,
+                        hoverinfo: 'skip',
+                        marker: {
+                            size: [32, 12],
+                            color: [accentColor, accentColor],
+                            opacity: [0.35, 1.0],
+                            line: {
+                                width: [2.5, 2],
+                                color: ['#FFFFFF', '#FFFFFF']
+                            }
+                        }
+                    };
+                    Plotly.addTraces(plotEl, radarTrace);
+
+                    // 3. Find summit domain
+                    let summitDomain = '未分类区域';
+                    const cluster = CLUSTERS_DATA.find(c => c.id === pt.clusterId);
+                    if (cluster && cluster.domain) {
+                        summitDomain = cluster.domain;
+                    }
+
+                    // 4. Calculate Top-3 Nearest Semantic Neighbors
+                    const neighbors = ALL_POINTS
+                        .filter(p => p.path.split('\\\\').join('/') !== cleanTarget)
+                        .map(p => {
+                            const dx = p.x - pt.x;
+                            const dy = p.y - pt.y;
+                            return {
+                                path: p.path,
+                                title: p.title,
+                                dist: Math.sqrt(dx * dx + dy * dy)
+                            };
+                        })
+                        .sort((a, b) => a.dist - b.dist)
+                        .slice(0, 3);
+
+                    // 5. Update and Show Radar HUD
+                    if (hudEl) {
+                        const noteTitleEl = document.getElementById('hud-note-title');
+                        const peakDomainEl = document.getElementById('hud-peak-domain');
+                        const neighborsEl = document.getElementById('hud-neighbors');
+
+                        if (noteTitleEl) noteTitleEl.textContent = pt.title || pt.path.split('/').pop();
+                        if (peakDomainEl) {
+                            peakDomainEl.textContent = summitDomain;
+                            peakDomainEl.style.color = accentColor;
+                        }
+
+                        if (neighborsEl) {
+                            neighborsEl.innerHTML = '';
+                            neighbors.forEach(n => {
+                                const item = document.createElement('a');
+                                item.className = 'hud-neighbor-item';
+                                const openUrl = 'obsidian://open?vault=' + encodeURIComponent(VAULT_NAME) + '&file=' + encodeURIComponent(n.path);
+                                item.href = openUrl;
+                                item.title = n.path;
+
+                                const titleSpan = document.createElement('span');
+                                titleSpan.className = 'hud-neighbor-title';
+                                titleSpan.textContent = n.title;
+
+                                const distSpan = document.createElement('span');
+                                distSpan.className = 'hud-neighbor-dist';
+                                const simPct = Math.max(10, Math.round((1 - n.dist / 0.5) * 100));
+                                distSpan.textContent = '~' + simPct + '%';
+
+                                item.appendChild(titleSpan);
+                                item.appendChild(distSpan);
+
+                                item.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    try {
+                                        if (window.parent && window.parent !== window) {
+                                            window.parent.postMessage({ type: 'km_open_note', url: openUrl }, '*');
+                                        } else {
+                                            window.location.href = openUrl;
+                                        }
+                                    } catch(err) {
+                                        window.location.href = openUrl;
+                                    }
+                                });
+
+                                neighborsEl.appendChild(item);
+                            });
+                        }
+
+                        hudEl.classList.add('active');
+                    }
                 }
             });
         });

@@ -73,6 +73,11 @@ export const STRINGS = {
 		sample_desc: "每篇笔记前序采样字数，推荐 500–1000。字数越多语义越丰富，但计算耗时略增。",
 
 		// Section 4
+		sec_interaction: "交互联动",
+		radar_toggle_name: "编辑跟随雷达探针",
+		radar_toggle_desc: "在 Obsidian 中切换笔记时，地貌地图自动聚焦并点亮该笔记的位置与近邻。",
+
+		// Section 5
 		sec_data: "数据存储",
 		cache_name: "已存数据",
 		cache_desc: (n: number) => `已存 ${n} 篇笔记特征，更新免重复计算。`,
@@ -83,6 +88,11 @@ export const STRINGS = {
 		ribbon_tooltip: "查看知识地貌",
 		cmd_open: "查看知识地貌",
 		cmd_rebuild: "重建知识地貌",
+		cmd_locate: "在知识地貌中定位当前笔记",
+		notice_not_in_map: "当前笔记尚未收录于知识地貌中，请重新构建地图。",
+		hud_current_loc: "当前定位",
+		hud_peak_domain: "所属山峰",
+		hud_neighbors: "语义近邻",
 		empty_title: "尚未绘制地貌",
 		empty_desc: "轻点下方按钮，生成你的知识等高线地貌。",
 		btn_build: "构建地貌",
@@ -151,6 +161,11 @@ export const STRINGS = {
 		sample_desc: "Characters sampled per note (recommended 500–1000). Higher values capture richer semantics.",
 
 		// Section 4
+		sec_interaction: "Interaction",
+		radar_toggle_name: "Semantic Radar Probe",
+		radar_toggle_desc: "Automatically pan and highlight the active note on the map as you switch notes in Obsidian.",
+
+		// Section 5
 		sec_data: "Data Storage",
 		cache_name: "Saved Data",
 		cache_desc: (n: number) => `${n} notes saved. Skips reprocessing.`,
@@ -161,6 +176,11 @@ export const STRINGS = {
 		ribbon_tooltip: "Open Knowledge Topography",
 		cmd_open: "Open Knowledge Topography",
 		cmd_rebuild: "Rebuild Knowledge Topography",
+		cmd_locate: "Locate Active Note in Topography",
+		notice_not_in_map: "Note not found in the current topography map. Try rebuilding the map.",
+		hud_current_loc: "Current Location",
+		hud_peak_domain: "Summit",
+		hud_neighbors: "Semantic Neighbors",
 		empty_title: "Landscape Not Built",
 		empty_desc: "Click below to render your notes as a topographic map.",
 		btn_build: "Build Topography",

@@ -162,6 +162,11 @@ export class KnowledgeMapView extends ItemView {
 		content.createDiv({ cls: "knowledge-map-empty-icon", text: "⚠️" });
 		content.createEl("h3", { cls: "knowledge-map-error-title", text: i18n.err_title });
 		content.createEl("p", { cls: "knowledge-map-error-msg", text: message });
+		if (this.plugin.lastErrorStack) {
+			const details = content.createEl("details", { cls: "knowledge-map-error-details" });
+			details.createEl("summary", { text: "查看错误堆栈 (Error Stack)" });
+			details.createEl("pre", { text: this.plugin.lastErrorStack, cls: "knowledge-map-error-pre" });
+		}
 
 		const retryBtn = content.createEl("button", {
 			cls: "knowledge-map-primary-btn",
@@ -240,5 +245,11 @@ export class KnowledgeMapView extends ItemView {
 			window.open(`file:///${fullPath}`);
 			new Notice(t(this.plugin.settings.locale).notice_html_opened);
 		}
+	}
+
+	locateNote(path: string): boolean {
+		if (!this.iframeEl || !this.iframeEl.contentWindow) return false;
+		this.iframeEl.contentWindow.postMessage({ type: "km_locate_note", path }, "*");
+		return true;
 	}
 }

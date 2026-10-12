@@ -18,6 +18,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 	llmSynthesizer: LLMSynthesizer;
 	spatialComputer: SpatialComputer;
 	isGenerating = false;
+	lastErrorStack: string = "";
 	private mapData: MapData | null = null;
 	private statusBarItem: HTMLElement | null = null;
 	private stateFilePath: string;
@@ -67,7 +68,40 @@ export default class KnowledgeMapPlugin extends Plugin {
 			},
 		});
 
-		// 5. Register Settings Tab
+		this.addCommand({
+			id: "locate-active-note",
+			name: t(this.settings.locale).cmd_locate,
+			checkCallback: (checking: boolean) => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) return false;
+				if (checking) return true;
+
+				void (async () => {
+					await this.activateView();
+					const view = this.getActiveView();
+					if (view) {
+						view.locateNote(activeFile.path);
+					}
+				})();
+				return true;
+			},
+		});
+
+		// 5. Register Active Leaf Change for Auto-Locating (Radar Probe)
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", (leaf) => {
+				if (!this.settings.autoLocateActiveNote) return;
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile || activeFile.extension !== "md") return;
+
+				const view = this.getActiveView();
+				if (view) {
+					view.locateNote(activeFile.path);
+				}
+			})
+		);
+
+		// 6. Register Settings Tab
 		this.addSettingTab(new KnowledgeMapSettingTab(this.app, this));
 	}
 
@@ -281,7 +315,9 @@ export default class KnowledgeMapPlugin extends Plugin {
 			new Notice(`✅ 知识地图生成成功！共收录 ${allCached.length} 篇笔记。`);
 		} catch (err: unknown) {
 			const errMsg = err instanceof Error ? err.message : String(err);
-			console.error("[Knowledge Map] 生成地图失败:", err);
+			const errStack = err instanceof Error ? err.stack : "";
+			this.lastErrorStack = errStack || errMsg;
+			console.error("[Knowledge Map] 生成地图失败:", err, errStack);
 			if (this.statusBarItem) this.statusBarItem.setText("");
 			new Notice(`❌ 生成失败: ${errMsg}`, 8000);
 			if (view) {

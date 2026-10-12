@@ -283,7 +283,22 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// Section 4: Data Storage
+		// Section 4: Interaction
+		new Setting(containerEl).setName(i18n.sec_interaction).setHeading();
+
+		new Setting(containerEl)
+			.setName(i18n.radar_toggle_name)
+			.setDesc(i18n.radar_toggle_desc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.autoLocateActiveNote)
+					.onChange(async (val) => {
+						this.plugin.settings.autoLocateActiveNote = val;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Section 5: Data Storage
 		new Setting(containerEl).setName(i18n.sec_data).setHeading();
 
 		const cachedCount = this.plugin.cacheManager.size();
