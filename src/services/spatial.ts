@@ -42,6 +42,7 @@ export class SpatialComputer {
 		const points2D: Point2D[] = raw2d.map(([x, y], idx) => {
 			const nx = (x - minRawX) / spanX;
 			const ny = (y - minRawY) / spanY;
+			const ctime = cachedList[idx].ctime || cachedList[idx].mtime || Date.now();
 			return {
 				path: cachedList[idx].path,
 				title: cachedList[idx].title,
@@ -49,6 +50,7 @@ export class SpatialComputer {
 				x: nx,
 				y: ny,
 				clusterId: 0,
+				ctime: ctime,
 			};
 		});
 
@@ -175,13 +177,16 @@ export class SpatialComputer {
 			clusters[closestId].notes.push(pt);
 		}
 
-		// Sort notes in each cluster by distance to centroid (medoids first)
+		// Sort notes in each cluster by distance to centroid (medoids first) and calculate earliest creation time
 		for (const c of clusters) {
 			c.notes.sort((a, b) => {
 				const distA = Math.hypot(a.x - c.x, a.y - c.y);
 				const distB = Math.hypot(b.x - c.x, b.y - c.y);
 				return distA - distB;
 			});
+			c.firstCtime = c.notes.length > 0
+				? Math.min(...c.notes.map((n) => n.ctime ?? Infinity))
+				: 0;
 		}
 
 		return {

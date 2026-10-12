@@ -298,6 +298,31 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 					});
 			});
 
+		new Setting(containerEl)
+			.setName(i18n.time_slider_toggle_name)
+			.setDesc(i18n.time_slider_toggle_desc)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.showTimeSlider)
+					.onChange(async (val) => {
+						this.plugin.settings.showTimeSlider = val;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(i18n.time_field_name)
+			.setDesc(i18n.time_field_desc)
+			.addText((text) => {
+				text
+					.setPlaceholder("date")
+					.setValue(this.plugin.settings.timeFrontmatterKey)
+					.onChange(async (val) => {
+						this.plugin.settings.timeFrontmatterKey = val.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
 		// Section 5: Data Storage
 		new Setting(containerEl).setName(i18n.sec_data).setHeading();
 

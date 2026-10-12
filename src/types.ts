@@ -17,6 +17,8 @@ export interface KnowledgeMapSettings {
 	maxCharsPerNote: number;
 	contourLevels: number;
 	autoLocateActiveNote: boolean;
+	showTimeSlider: boolean;
+	timeFrontmatterKey: string;
 }
 
 export const DEFAULT_SETTINGS: KnowledgeMapSettings = {
@@ -34,6 +36,8 @@ export const DEFAULT_SETTINGS: KnowledgeMapSettings = {
 	maxCharsPerNote: 600,
 	contourLevels: 32,
 	autoLocateActiveNote: true,
+	showTimeSlider: true,
+	timeFrontmatterKey: "date",
 };
 
 export interface NoteItem {
@@ -41,6 +45,7 @@ export interface NoteItem {
 	title: string;
 	folder: string;
 	mtime: number;
+	ctime: number;
 	size: number;
 	contentSnippet: string;
 	tags?: string[];
@@ -51,6 +56,7 @@ export interface CachedEmbedding {
 	title: string;
 	folder?: string;
 	mtime: number;
+	ctime?: number;
 	vector: number[];
 }
 
@@ -61,6 +67,7 @@ export interface Point2D {
 	x: number;
 	y: number;
 	clusterId: number;
+	ctime?: number;
 	tags?: string[];
 	snippet?: string;
 }
@@ -73,6 +80,7 @@ export interface PeakCluster {
 	domain: string;
 	badge: string;
 	notes: Point2D[];
+	firstCtime?: number;
 }
 
 export interface ThemeConfig {

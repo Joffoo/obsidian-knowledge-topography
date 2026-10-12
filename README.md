@@ -15,7 +15,8 @@
 ### ✨ 核心特性
 
 - 🏔️ **80 层微地形等高线**：平滑细腻的高阶等高线算法，将抽象的笔记密度转化为生动的地理海拔与连绵山脉。
-- 🎯 **语义雷达探针与实时近邻定位 (Radar Probe)**：当你在 Obsidian 中切换正在编辑的笔记时，地貌地图自动自适应平移聚焦至目标坐标，点亮雷达光斑；底部浮现高质感毛玻璃 HUD 卡片，实时显示所属山峰主题及相似度最高的 **Top-3 语义近邻笔记**，支持一键点击直接打开。
+- ⏳ **时光演变与地质造山回放 (Timeline Slider)**：屏幕顶部常驻悬浮「时光演变」灵动岛控制器，支持拖动时间轴或一键播放知识库造山运动。笔记散点与等高线隆起逐篇精准同步涌现，支持通过 YAML 前置属性自定义时间字段或完全自动遵循文件创建时间。
+- 🎯 **随选聚焦雷达探针与实时近邻 (Radar Probe)**：当你在 Obsidian 中切换正在编辑的笔记时，地貌地图自动自适应平移聚焦至目标坐标，点亮雷达光斑；底部浮现高质感毛玻璃 HUD 卡片，实时显示所属山峰主题及相似度最高的 **Top-3 语义相关笔记**，支持一键点击直接打开。
 - 🧭 **自由漫游与全貌回归 (Free Navigation & Reset)**：全面解锁地图自由平移浏览（Pan），并通过右上角风格胶囊内置的微型回归按钮 `⟲` 或在空白画布**双击鼠标**瞬间平滑回归完整地貌全景。
 - 🏷️ **自适应山峰识别与 AI 领域命名**：采用自适应带宽核密度与局部非极大值抑制（NMS）自动锚定知识高地，并支持联动大语言模型（如 DeepSeek、OpenAI、本地 Ollama 等）自动提炼各山峰的主题领域。
 - 🌐 **双语界面原生支持 (i18n)**：设置后台与视图均提供原生的 **简体中文** 与 **English** 双语支持，并支持自动跟随 Obsidian 客户端语言。
@@ -80,6 +81,7 @@
 ### ✨ Features
 
 - 🏔️ **80-Level Topographic Contours**: Generates smooth, high-precision contour lines reflecting note semantic density across your vault.
+- ⏳ **Chronological Evolution Timeline (Timeline Slider)**: Floating Dynamic Island controller docked at the top center. Scrub through time or play real-time orogeny animations. Notes and terrain contours emerge in perfect 1:1 sync with configurable YAML date support.
 - 🎯 **Semantic Radar Probe & Real-time Neighbor HUD (Radar Probe)**: When switching active notes in Obsidian, the topography map smoothly pans and centers on the note's coordinates with an animated radar pulse ripple. A glassmorphic HUD card reveals the summit domain and top-3 closest semantic neighbors with instant click-to-open access.
 - 🧭 **Free Navigation & Seamless Reset (Free Pan & Reset)**: Freely drag and pan across the terrain. Instantly reset to the full global overview by clicking the subtle `⟲` button on the top-right capsule or by double-clicking anywhere on the empty canvas.
 - 🏷️ **Intelligent Mountain Peak Detection & AI Naming**: Automatically identifies semantic summits using localized non-maximum suppression (NMS) and synthesizes domain labels via LLMs (e.g., DeepSeek, OpenAI, Ollama).

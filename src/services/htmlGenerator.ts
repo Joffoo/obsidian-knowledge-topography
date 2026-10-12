@@ -6,11 +6,13 @@ export interface HtmlGeneratorOptions {
 	initialStyle: string;
 	mapData: MapData;
 	localPlotlyUrl?: string | null;
+	showTimeSlider?: boolean;
 }
 
 export class HtmlMapGenerator {
 	static generate(options: HtmlGeneratorOptions): string {
 		const { vaultName, initialStyle, mapData, localPlotlyUrl } = options;
+		const showTimeSlider = options.showTimeSlider !== false;
 		const styleKey = THEMES[initialStyle] ? initialStyle : "shanshui";
 		const theme = getTheme(styleKey);
 
@@ -154,7 +156,7 @@ export class HtmlMapGenerator {
 				borderwidth: 1,
 				orientation: "h",
 				yanchor: "bottom",
-				y: 0.03,
+				y: 0.02,
 				xanchor: "center",
 				x: 0.5,
 				itemsizing: "constant",
@@ -241,6 +243,7 @@ export class HtmlMapGenerator {
 				x: p.x,
 				y: p.y,
 				clusterId: p.clusterId,
+				ctime: p.ctime || 0,
 			}))
 		);
 		const clustersSummaryJson = JSON.stringify(
@@ -249,9 +252,12 @@ export class HtmlMapGenerator {
 				domain: c.domain,
 				x: c.x,
 				y: c.y,
+				firstCtime: c.firstCtime || 0,
 			}))
 		);
 		const gridBoundsJson = JSON.stringify(mapData.gridBounds || [-0.15, 1.15]);
+		const uniqueFoldersJson = JSON.stringify(uniqueFolders);
+		const initialDensityGridJson = JSON.stringify(mapData.densityGrid);
 
 		return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -531,6 +537,145 @@ export class HtmlMapGenerator {
             font-family: monospace;
             margin-left: 6px;
         }
+
+        /* Time Evolution Slider Capsule (huashu-design) */
+        #time-slider-capsule {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            background: ${isDark ? "rgba(18, 18, 24, 0.88)" : "rgba(255, 255, 255, 0.90)"};
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.10)"};
+            border-radius: 40px;
+            padding: 5px 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.14);
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            user-select: none;
+            gap: 8px;
+        }
+        #time-slider-capsule.minimized {
+            padding: 6px 10px;
+            border-radius: 50px;
+        }
+        #time-slider-capsule.minimized .time-capsule-body {
+            display: none !important;
+        }
+        .time-capsule-toggle {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .time-capsule-toggle:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        .time-capsule-body {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .time-btn {
+            background: ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)"};
+            border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)"};
+            color: ${isDark ? "#FFFFFF" : theme.inkColor};
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .time-btn:hover {
+            background: ${theme.accentColor};
+            color: #FFFFFF;
+            border-color: ${theme.accentColor};
+            transform: scale(1.05);
+        }
+        .time-reset-btn {
+            border-radius: 16px;
+            width: auto;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .time-center-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 250px;
+        }
+        .time-header-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            line-height: 1.2;
+            color: ${isDark ? "rgba(255, 255, 255, 0.85)" : theme.inkColor};
+        }
+        .time-date-text {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .time-badge {
+            font-size: 10px;
+            opacity: 0.65;
+            font-family: monospace;
+        }
+        .time-track-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .time-bound-label {
+            font-size: 9px;
+            opacity: 0.5;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+        .time-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.12)"};
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .time-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: ${theme.accentColor};
+            border: 2px solid ${isDark ? "#121218" : "#FFFFFF"};
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+            cursor: pointer;
+            transition: transform 0.15s ease, background-color 0.2s;
+        }
+        .time-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
     </style>
     <style id="theme-custom-style">
         ${theme.htmlCustomCss}
@@ -572,6 +717,31 @@ export class HtmlMapGenerator {
         </div>
     </div>
 
+    <!-- Time Evolution Slider Capsule (huashu-design) -->
+    ${showTimeSlider ? `
+    <div id="time-slider-capsule">
+        <button id="time-toggle-btn" class="time-capsule-toggle" title="折叠/展开时光轴">⏳</button>
+        <div id="time-capsule-content" class="time-capsule-body">
+            <button id="time-play-btn" class="time-btn time-play-btn" title="播放造山演化 (Play Time-lapse)">
+                <span id="time-play-icon">▶</span>
+            </button>
+            <div class="time-center-block">
+                <div class="time-header-meta">
+                    <span id="time-current-date" class="time-date-text">今日地貌</span>
+                    <span id="time-count-badge" class="time-badge">全部笔记 (100%)</span>
+                </div>
+                <div class="time-track-wrapper">
+                    <span id="time-min-label" class="time-bound-label">--</span>
+                    <input type="range" id="time-range-input" class="time-slider" min="1" max="100" value="100" step="1">
+                    <span id="time-max-label" class="time-bound-label">最新</span>
+                </div>
+            </div>
+            <button id="time-reset-btn" class="time-btn time-reset-btn" title="回归最新地貌 (Present Day)">
+                最新
+            </button>
+        </div>
+    </div>` : ''}
+
     <div id="main-stage">
         <div id="map-plot" class="plotly-graph-div"></div>
     </div>
@@ -586,6 +756,11 @@ export class HtmlMapGenerator {
         const CLUSTERS_DATA = ${clustersSummaryJson};
         const GRID_BOUNDS = ${gridBoundsJson};
         const UNIQUE_FOLDERS_COUNT = ${uniqueFolders.length};
+        const UNIQUE_FOLDERS = ${uniqueFoldersJson};
+        const INITIAL_DENSITY_GRID = ${initialDensityGridJson};
+        const INITIAL_X_RANGE = ${JSON.stringify(xRange)};
+        const INITIAL_Y_RANGE = ${JSON.stringify(yRange)};
+        const SHOW_TIME_SLIDER = ${showTimeSlider};
 
         function applyTheme(styleKey) {
             const theme = THEMES_DATA[styleKey] || THEMES_DATA['shanshui'];
@@ -931,6 +1106,338 @@ export class HtmlMapGenerator {
                         }
 
                         hudEl.classList.add('active');
+                    }
+                }
+
+                // ==========================================
+                // Geological Evolution History (时光滑块)
+                // ==========================================
+                if (SHOW_TIME_SLIDER && ALL_POINTS && ALL_POINTS.length > 0) {
+                    const timeCapsule = document.getElementById('time-slider-capsule');
+                    const timeToggleBtn = document.getElementById('time-toggle-btn');
+                    const timePlayBtn = document.getElementById('time-play-btn');
+                    const timePlayIcon = document.getElementById('time-play-icon');
+                    const timeResetBtn = document.getElementById('time-reset-btn');
+                    const timeSliderInput = document.getElementById('time-range-input');
+                    const currentDateEl = document.getElementById('time-current-date');
+                    const countBadgeEl = document.getElementById('time-count-badge');
+                    const minLabelEl = document.getElementById('time-min-label');
+                    const maxLabelEl = document.getElementById('time-max-label');
+
+                    // 1. Sort points chronologically
+                    const SORTED_POINTS = ALL_POINTS.slice().sort(function(a, b) {
+                        return (a.ctime || 0) - (b.ctime || 0);
+                    });
+                    const totalNotes = SORTED_POINTS.length;
+
+                    // 2. Pre-index points by folder
+                    const FOLDER_POINTS_MAP = {};
+                    UNIQUE_FOLDERS.forEach(function(f) {
+                        FOLDER_POINTS_MAP[f] = ALL_POINTS.filter(function(p) { return (p.folder || '/') === f; });
+                    });
+
+                    // 3. Grid coordinates for fast dynamic KDE (80x80)
+                    const TIME_GRID_W = 80;
+                    const TIME_GRID_H = 80;
+                    const TIME_GRID_MIN = GRID_BOUNDS[0];
+                    const TIME_GRID_MAX = GRID_BOUNDS[1];
+                    const TIME_STEP = (TIME_GRID_MAX - TIME_GRID_MIN) / (TIME_GRID_W - 1);
+
+                    const timeXRange = [];
+                    for (let i = 0; i < TIME_GRID_W; i++) timeXRange.push(TIME_GRID_MIN + i * TIME_STEP);
+                    const timeYRange = [];
+                    for (let i = 0; i < TIME_GRID_H; i++) timeYRange.push(TIME_GRID_MIN + i * TIME_STEP);
+
+                    function computeDynamicKDE(activePoints) {
+                        const grid = Array.from({ length: TIME_GRID_H }, function() {
+                            return new Float32Array(TIME_GRID_W);
+                        });
+                        if (!activePoints || activePoints.length === 0) return grid;
+
+                        const bw = Math.min(0.055, Math.max(0.04, 0.16 / Math.pow(Math.max(activePoints.length, 3), 0.15)));
+                        const twoSigmaSq = 2 * bw * bw;
+                        const radius = Math.ceil(bw * 2.5 / TIME_STEP);
+
+                        for (let p = 0; p < activePoints.length; p++) {
+                            const pt = activePoints[p];
+                            const gx = Math.round((pt.x - TIME_GRID_MIN) / TIME_STEP);
+                            const gy = Math.round((pt.y - TIME_GRID_MIN) / TIME_STEP);
+                            const minI = Math.max(0, gy - radius);
+                            const maxI = Math.min(TIME_GRID_H - 1, gy + radius);
+                            const minJ = Math.max(0, gx - radius);
+                            const maxJ = Math.min(TIME_GRID_W - 1, gx + radius);
+
+                            for (let i = minI; i <= maxI; i++) {
+                                const dy = TIME_GRID_MIN + i * TIME_STEP - pt.y;
+                                const dySq = dy * dy;
+                                for (let j = minJ; j <= maxJ; j++) {
+                                    const dx = TIME_GRID_MIN + j * TIME_STEP - pt.x;
+                                    grid[i][j] += Math.exp(-(dx * dx + dySq) / twoSigmaSq);
+                                }
+                            }
+                        }
+
+                        // Normalize to [0, 1]
+                        let maxVal = 0;
+                        for (let i = 0; i < TIME_GRID_H; i++) {
+                            for (let j = 0; j < TIME_GRID_W; j++) {
+                                if (grid[i][j] > maxVal) maxVal = grid[i][j];
+                            }
+                        }
+                        if (maxVal > 0) {
+                            for (let i = 0; i < TIME_GRID_H; i++) {
+                                for (let j = 0; j < TIME_GRID_W; j++) {
+                                    grid[i][j] = grid[i][j] / maxVal;
+                                }
+                            }
+                        }
+                        return grid;
+                    }
+
+                    function formatNoteDate(ts) {
+                        if (!ts || isNaN(ts) || ts <= 0) return '早期探索';
+                        const d = new Date(ts);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return y + '-' + m + '-' + day;
+                    }
+
+                    // Setup slider min and max
+                    if (timeSliderInput) {
+                        timeSliderInput.min = '1';
+                        timeSliderInput.max = String(totalNotes);
+                        timeSliderInput.value = String(totalNotes);
+                    }
+                    if (minLabelEl && totalNotes > 0) {
+                        minLabelEl.textContent = formatNoteDate(SORTED_POINTS[0].ctime);
+                    }
+                    if (maxLabelEl) {
+                        maxLabelEl.textContent = '最新';
+                    }
+                    if (countBadgeEl) {
+                        countBadgeEl.textContent = totalNotes + ' 篇 (100%)';
+                    }
+
+                    function applyTimeStep(stepCount) {
+                        if (!plotEl || !plotEl.data) return;
+                        const count = Math.max(1, Math.min(totalNotes, stepCount));
+
+                        if (count >= totalNotes) {
+                            // RESTORE 100% FULL ORIGINAL MAP
+                            if (currentDateEl) currentDateEl.textContent = '今日地貌 (当前最新)';
+                            if (countBadgeEl) countBadgeEl.textContent = totalNotes + ' 篇 (100%)';
+
+                            // 1. Restore high-res contour
+                            Plotly.restyle(plotEl, {
+                                z: [INITIAL_DENSITY_GRID],
+                                x: [INITIAL_X_RANGE],
+                                y: [INITIAL_Y_RANGE]
+                            }, [0]);
+
+                            // 2. Restore all folder scatters
+                            const fIndices = [];
+                            const xArr = [], yArr = [], tArr = [], cArr = [];
+                            for (let i = 0; i < UNIQUE_FOLDERS.length; i++) {
+                                const f = UNIQUE_FOLDERS[i];
+                                const pts = FOLDER_POINTS_MAP[f] || [];
+                                fIndices.push(1 + i);
+                                xArr.push(pts.map(function(p) { return p.x; }));
+                                yArr.push(pts.map(function(p) { return p.y; }));
+                                tArr.push(pts.map(function(p) { return p.title; }));
+                                cArr.push(pts.map(function(p) {
+                                    return 'obsidian://open?vault=' + encodeURIComponent(VAULT_NAME) + '&file=' + encodeURIComponent(p.path);
+                                }));
+                            }
+                            Plotly.restyle(plotEl, { x: xArr, y: yArr, text: tArr, customdata: cArr }, fIndices);
+
+                            // 3. Restore all peak badges
+                            const curKey = (document.getElementById('style-select') ? document.getElementById('style-select').value : null) || INITIAL_STYLE;
+                            const curTheme = THEMES_DATA[curKey] || THEMES_DATA['shanshui'];
+                            const markers = curTheme.peak_markers || ['I', 'II', 'III', 'IV', 'V'];
+                            const badgeType = curTheme.peak_badge_type || 'stamp';
+                            const peakStart = 1 + UNIQUE_FOLDERS.length;
+
+                            const peakIndices = [];
+                            const peakTexts = [];
+                            for (let i = 0; i < PEAKS_DATA.length; i++) {
+                                peakIndices.push(peakStart + i);
+                                const marker = markers[i % markers.length];
+                                const t = THEMES_LABELS[i] || ('PEAK ' + (i+1));
+                                let innerBadge = '';
+                                if (badgeType === 'stamp') {
+                                    innerBadge = "<span class='stamp-box'>" + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else if (badgeType === 'crosshair') {
+                                    innerBadge = "<span style='color:" + curTheme.accent_color + "; font-family:monospace; border:1px solid " + curTheme.accent_color + "; padding:1px 4px; font-size:10px;'>" + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else if (badgeType === 'star') {
+                                    innerBadge = "<span style='color:" + curTheme.accent_color + "; text-shadow:0 0 8px " + curTheme.accent_color + "; font-weight:bold;'>✦ " + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else if (badgeType === 'swiss_box') {
+                                    innerBadge = "<span style='background:" + curTheme.accent_color + "; color:#fff; padding:1px 5px; font-weight:bold; font-size:10px; margin-right:4px;'>" + marker + "</span><span class='peak-domain-name' style='color:" + curTheme.ink_color + "; font-weight:bold;'>" + t.toUpperCase() + "</span>";
+                                } else if (badgeType === 'zen_circle') {
+                                    innerBadge = "<span style='border:1px solid " + curTheme.secondary_color + "; border-radius:50%; padding:0 5px; color:" + curTheme.secondary_color + "; font-size:10px;'>" + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else {
+                                    innerBadge = "<span class='peak-domain-name' style='color:" + curTheme.secondary_color + "; font-weight:bold;'>[" + marker + "] " + t.toUpperCase() + "</span>";
+                                }
+                                peakTexts.push(["<span class='peak-pill-card' style='font-family:" + curTheme.font_family_web + ";'>" + innerBadge + "</span>"]);
+                            }
+                            Plotly.restyle(plotEl, { text: peakTexts }, peakIndices);
+                            return;
+                        }
+
+                        // TIME SLICE (count < totalNotes)
+                        const activePoints = SORTED_POINTS.slice(0, count);
+                        const latestActivePt = activePoints[activePoints.length - 1];
+                        const cutoffTime = latestActivePt.ctime || 0;
+
+                        if (currentDateEl) currentDateEl.textContent = formatNoteDate(cutoffTime);
+                        if (countBadgeEl) {
+                            const pct = Math.round((count / totalNotes) * 100);
+                            countBadgeEl.textContent = count + ' / ' + totalNotes + ' 篇 (' + pct + '%)';
+                        }
+
+                        // 1. Dynamic density grid
+                        const dynamicGrid = computeDynamicKDE(activePoints);
+                        Plotly.restyle(plotEl, {
+                            z: [dynamicGrid],
+                            x: [timeXRange],
+                            y: [timeYRange]
+                        }, [0]);
+
+                        // 2. Filter folder scatter points
+                        const activePathSet = new Set(activePoints.map(function(p) { return p.path; }));
+                        const fIndices = [];
+                        const xArr = [], yArr = [], tArr = [], cArr = [];
+                        for (let i = 0; i < UNIQUE_FOLDERS.length; i++) {
+                            const f = UNIQUE_FOLDERS[i];
+                            const pts = (FOLDER_POINTS_MAP[f] || []).filter(function(p) {
+                                return activePathSet.has(p.path);
+                            });
+                            fIndices.push(1 + i);
+                            xArr.push(pts.map(function(p) { return p.x; }));
+                            yArr.push(pts.map(function(p) { return p.y; }));
+                            tArr.push(pts.map(function(p) { return p.title; }));
+                            cArr.push(pts.map(function(p) {
+                                return 'obsidian://open?vault=' + encodeURIComponent(VAULT_NAME) + '&file=' + encodeURIComponent(p.path);
+                            }));
+                        }
+                        Plotly.restyle(plotEl, { x: xArr, y: yArr, text: tArr, customdata: cArr }, fIndices);
+
+                        // 3. Peak badges: only show peaks that have active notes in that cluster
+                        const curKey = (document.getElementById('style-select') ? document.getElementById('style-select').value : null) || INITIAL_STYLE;
+                        const curTheme = THEMES_DATA[curKey] || THEMES_DATA['shanshui'];
+                        const markers = curTheme.peak_markers || ['I', 'II', 'III', 'IV', 'V'];
+                        const badgeType = curTheme.peak_badge_type || 'stamp';
+                        const peakStart = 1 + UNIQUE_FOLDERS.length;
+
+                        const peakIndices = [];
+                        const peakTexts = [];
+                        for (let i = 0; i < PEAKS_DATA.length; i++) {
+                            peakIndices.push(peakStart + i);
+                            const cluster = CLUSTERS_DATA[i];
+                            const clusterActiveCount = activePoints.filter(function(p) { return p.clusterId === cluster.id; }).length;
+
+                            if (clusterActiveCount >= 2) {
+                                const marker = markers[i % markers.length];
+                                const t = THEMES_LABELS[i] || ('PEAK ' + (i+1));
+                                let innerBadge = '';
+                                if (badgeType === 'stamp') {
+                                    innerBadge = "<span class='stamp-box'>" + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else if (badgeType === 'crosshair') {
+                                    innerBadge = "<span style='color:" + curTheme.accent_color + "; font-family:monospace; border:1px solid " + curTheme.accent_color + "; padding:1px 4px; font-size:10px;'>" + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else if (badgeType === 'star') {
+                                    innerBadge = "<span style='color:" + curTheme.accent_color + "; text-shadow:0 0 8px " + curTheme.accent_color + "; font-weight:bold;'>✦ " + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else if (badgeType === 'swiss_box') {
+                                    innerBadge = "<span style='background:" + curTheme.accent_color + "; color:#fff; padding:1px 5px; font-weight:bold; font-size:10px; margin-right:4px;'>" + marker + "</span><span class='peak-domain-name' style='color:" + curTheme.ink_color + "; font-weight:bold;'>" + t.toUpperCase() + "</span>";
+                                } else if (badgeType === 'zen_circle') {
+                                    innerBadge = "<span style='border:1px solid " + curTheme.secondary_color + "; border-radius:50%; padding:0 5px; color:" + curTheme.secondary_color + "; font-size:10px;'>" + marker + "</span>&nbsp;<span class='peak-domain-name' style='color:" + curTheme.ink_color + ";'>" + t + "</span>";
+                                } else {
+                                    innerBadge = "<span class='peak-domain-name' style='color:" + curTheme.secondary_color + "; font-weight:bold;'>[" + marker + "] " + t.toUpperCase() + "</span>";
+                                }
+                                peakTexts.push(["<span class='peak-pill-card' style='font-family:" + curTheme.font_family_web + ";'>" + innerBadge + "</span>"]);
+                            } else {
+                                peakTexts.push([""]);
+                            }
+                        }
+                        Plotly.restyle(plotEl, { text: peakTexts }, peakIndices);
+                    }
+
+                    // Animation & Playback State
+                    let isPlaying = false;
+                    let playTimer = null;
+                    let rafSchedule = null;
+
+                    function scheduleTimeStep(val) {
+                        if (rafSchedule) cancelAnimationFrame(rafSchedule);
+                        rafSchedule = requestAnimationFrame(function() {
+                            applyTimeStep(val);
+                        });
+                    }
+
+                    function startPlay() {
+                        if (isPlaying) return;
+                        isPlaying = true;
+                        if (timePlayIcon) timePlayIcon.textContent = '⏸';
+                        let curVal = parseInt(timeSliderInput.value, 10);
+                        if (curVal >= totalNotes) {
+                            curVal = Math.min(3, totalNotes);
+                            timeSliderInput.value = String(curVal);
+                            applyTimeStep(curVal);
+                        }
+
+                        const stepSize = Math.max(1, Math.floor(totalNotes / 75));
+                        playTimer = setInterval(function() {
+                            curVal += stepSize;
+                            if (curVal >= totalNotes) {
+                                curVal = totalNotes;
+                                timeSliderInput.value = String(curVal);
+                                applyTimeStep(curVal);
+                                stopPlay();
+                            } else {
+                                timeSliderInput.value = String(curVal);
+                                scheduleTimeStep(curVal);
+                            }
+                        }, 70);
+                    }
+
+                    function stopPlay() {
+                        isPlaying = false;
+                        if (timePlayIcon) timePlayIcon.textContent = '▶';
+                        if (playTimer) {
+                            clearInterval(playTimer);
+                            playTimer = null;
+                        }
+                    }
+
+                    if (timePlayBtn) {
+                        timePlayBtn.addEventListener('click', function() {
+                            if (isPlaying) {
+                                stopPlay();
+                            } else {
+                                startPlay();
+                            }
+                        });
+                    }
+
+                    if (timeSliderInput) {
+                        timeSliderInput.addEventListener('input', function(e) {
+                            stopPlay();
+                            const val = parseInt(e.target.value, 10);
+                            scheduleTimeStep(val);
+                        });
+                    }
+
+                    if (timeResetBtn) {
+                        timeResetBtn.addEventListener('click', function() {
+                            stopPlay();
+                            timeSliderInput.value = String(totalNotes);
+                            applyTimeStep(totalNotes);
+                        });
+                    }
+
+                    if (timeToggleBtn && timeCapsule) {
+                        timeToggleBtn.addEventListener('click', function() {
+                            timeCapsule.classList.toggle('minimized');
+                        });
                     }
                 }
             });

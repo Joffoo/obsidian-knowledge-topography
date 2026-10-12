@@ -1,5 +1,6 @@
-import { ItemView, WorkspaceLeaf, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, Notice, TFile } from "obsidian";
 import { HtmlMapGenerator } from "../services/htmlGenerator";
+import { resolveNoteTimestamp } from "../services/indexer";
 import KnowledgeMapPlugin from "../main";
 import { t } from "../i18n";
 
@@ -218,6 +219,18 @@ export class KnowledgeMapView extends ItemView {
 		const mapData = this.plugin.getMapData();
 		if (!mapData) return;
 
+		// Ensure accurate ctime using configured YAML field or universal ctime
+		if (Array.isArray(mapData.points)) {
+			for (const pt of mapData.points) {
+				const file = this.app.vault.getAbstractFileByPath(pt.path);
+				if (file instanceof TFile) {
+					pt.ctime = resolveNoteTimestamp(this.app, file, this.plugin.settings.timeFrontmatterKey);
+				} else if (!pt.ctime || pt.ctime <= 0) {
+					pt.ctime = Date.now();
+				}
+			}
+		}
+
 		const pluginDir = this.plugin.manifest.dir ?? `${this.app.vault.configDir}/plugins/knowledge-topography`;
 		const plotlyPath = `${pluginDir}/plotly.min.js`;
 		let localPlotlyUrl: string | null = null;
@@ -230,6 +243,7 @@ export class KnowledgeMapView extends ItemView {
 			initialStyle: this.plugin.settings.currentTheme,
 			mapData: mapData,
 			localPlotlyUrl: localPlotlyUrl,
+			showTimeSlider: this.plugin.settings.showTimeSlider,
 		});
 
 		this.iframeEl.srcdoc = html;

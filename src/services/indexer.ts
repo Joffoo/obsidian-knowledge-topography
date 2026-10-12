@@ -1,5 +1,27 @@
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 import { NoteItem, KnowledgeMapSettings } from "../types";
+
+export function resolveNoteTimestamp(app: App, file: TFile, yamlField?: string): number {
+	// 1. 若指定了 YAML 字段，尝试从笔记 frontmatter 读取
+	const field = yamlField?.trim();
+	if (field) {
+		const fileCache = app.metadataCache.getFileCache(file);
+		const rawVal = fileCache?.frontmatter?.[field];
+		if (rawVal !== undefined && rawVal !== null) {
+			if (typeof rawVal === "number") {
+				const ms = rawVal < 10000000000 ? rawVal * 1000 : rawVal;
+				if (ms > 0) return ms;
+			}
+			const parsed = Date.parse(String(rawVal).trim());
+			if (!isNaN(parsed) && parsed > 0) {
+				return parsed;
+			}
+		}
+	}
+
+	// 2. 通用方法：直接使用文件的创建时间 ctime（兜底使用修改时间 mtime）
+	return file.stat.ctime > 0 ? file.stat.ctime : (file.stat.mtime || Date.now());
+}
 
 export class VaultIndexer {
 	private app: App;
@@ -66,6 +88,9 @@ export class VaultIndexer {
 				new Set(rawTags.map((t) => t.replace(/^#/, "").trim()))
 			).filter((t) => t.length > 0).slice(0, 5);
 
+			// Note timestamp extraction (custom YAML field or universal ctime)
+			const ctime = resolveNoteTimestamp(this.app, file, this.settings.timeFrontmatterKey);
+
 			const folderName = file.parent && file.parent.path ? file.parent.path : "/";
 
 			result.push({
@@ -73,6 +98,7 @@ export class VaultIndexer {
 				title: file.basename,
 				folder: folderName,
 				mtime: file.stat.mtime,
+				ctime: ctime,
 				size: file.stat.size,
 				contentSnippet: snippet,
 				tags,

@@ -1,9 +1,9 @@
-import { Plugin, Notice } from "obsidian";
+import { Plugin, Notice, TFile } from "obsidian";
 import { DEFAULT_SETTINGS, KnowledgeMapSettings, MapData, NoteItem } from "./types";
 import { KnowledgeMapSettingTab } from "./settings";
 import { KnowledgeMapView, KNOWLEDGE_MAP_VIEW_TYPE } from "./views/KnowledgeMapView";
 import { EmbeddingCacheManager } from "./services/cache";
-import { VaultIndexer } from "./services/indexer";
+import { VaultIndexer, resolveNoteTimestamp } from "./services/indexer";
 import { EmbeddingService } from "./services/embedding";
 import { LLMSynthesizer } from "./services/llm";
 import { SpatialComputer } from "./services/spatial";
@@ -126,6 +126,16 @@ export default class KnowledgeMapPlugin extends Plugin {
 			if (await this.app.vault.adapter.exists(this.stateFilePath)) {
 				const content = await this.app.vault.adapter.read(this.stateFilePath);
 				this.mapData = JSON.parse(content) as MapData;
+				if (this.mapData && Array.isArray(this.mapData.points)) {
+					for (const pt of this.mapData.points) {
+						const file = this.app.vault.getAbstractFileByPath(pt.path);
+						if (file instanceof TFile) {
+							pt.ctime = resolveNoteTimestamp(this.app, file, this.settings.timeFrontmatterKey);
+						} else if (!pt.ctime || pt.ctime <= 0) {
+							pt.ctime = Date.now();
+						}
+					}
+				}
 			}
 		} catch (e: unknown) {
 			console.warn("[Knowledge Map] 未能载入历史地图数据:", e);
@@ -234,6 +244,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 							title: targetNote.title,
 							folder: targetNote.folder,
 							mtime: targetNote.mtime,
+							ctime: targetNote.ctime,
 							vector: vec,
 						});
 					}
@@ -241,13 +252,14 @@ export default class KnowledgeMapPlugin extends Plugin {
 				await this.cacheManager.save();
 			}
 
-			// Collect all valid embeddings with folder info
+			// Collect all valid embeddings with folder and ctime info
 			const allCached = this.cacheManager.getAll().filter((c) =>
 				notes.some((n) => n.path === c.path)
 			).map((c) => {
 				const n = notes.find((item) => item.path === c.path);
 				return {
 					...c,
+					ctime: n?.ctime || c.ctime || n?.mtime || c.mtime,
 					folder: n?.folder || c.folder || "/",
 				};
 			});
@@ -294,6 +306,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 				initialStyle: this.settings.currentTheme,
 				mapData: mapData,
 				localPlotlyUrl: "./plotly.min.js",
+				showTimeSlider: this.settings.showTimeSlider,
 			});
 			mapData.htmlContent = standaloneHtml;
 
