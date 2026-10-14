@@ -1,5 +1,5 @@
 import { Plugin, Notice, TFile } from "obsidian";
-import { DEFAULT_SETTINGS, KnowledgeMapSettings, MapData, NoteItem } from "./types";
+import { DEFAULT_SETTINGS, KnowledgeMapSettings, MapData, NoteItem, SemanticSearchResultItem } from "./types";
 import { KnowledgeMapSettingTab } from "./settings";
 import { KnowledgeMapView, KNOWLEDGE_MAP_VIEW_TYPE } from "./views/KnowledgeMapView";
 import { EmbeddingCacheManager } from "./services/cache";
@@ -87,6 +87,20 @@ export default class KnowledgeMapPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "search-knowledge-map",
+			name: t(this.settings.locale).cmd_search,
+			callback: () => {
+				void (async () => {
+					await this.activateView();
+					const view = this.getActiveView();
+					if (view) {
+						view.focusSearch();
+					}
+				})();
+			},
+		});
+
 		// 5. Register Active Leaf Change for Auto-Locating (Radar Probe)
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
@@ -153,6 +167,69 @@ export default class KnowledgeMapPlugin extends Plugin {
 
 	getMapData(): MapData | null {
 		return this.mapData;
+	}
+
+	async searchTopography(query: string): Promise<SemanticSearchResultItem[]> {
+		if (!this.mapData || !this.mapData.points || this.mapData.points.length === 0) {
+			throw new Error(t(this.settings.locale).search_not_built);
+		}
+
+		const queryVector = await this.embeddingService.computeQueryEmbedding(query);
+		if (!queryVector || queryVector.length === 0) {
+			throw new Error("未能生成搜索向量。");
+		}
+
+		// Calculate cosine similarities with all cached vectors
+		const allCached = this.cacheManager.getAll();
+		const pointMap = new Map<string, (typeof this.mapData.points)[0]>();
+		for (const pt of this.mapData.points) {
+			pointMap.set(pt.path, pt);
+		}
+
+		const clusterMap = new Map<number, string>();
+		if (this.mapData.clusters) {
+			for (const c of this.mapData.clusters) {
+				clusterMap.set(c.id, c.domain);
+			}
+		}
+
+		const scoredItems: SemanticSearchResultItem[] = [];
+
+		for (const cached of allCached) {
+			if (!cached.vector || cached.vector.length === 0) continue;
+			const pt = pointMap.get(cached.path);
+			if (!pt) continue;
+
+			const sim = this.cosineSimilarity(queryVector, cached.vector);
+			scoredItems.push({
+				path: pt.path,
+				title: pt.title,
+				folder: pt.folder || "/",
+				similarity: Number(sim.toFixed(4)),
+				similarityPercent: Math.max(0, Math.min(100, Math.round(sim * 100))),
+				x: pt.x,
+				y: pt.y,
+				clusterId: pt.clusterId,
+				clusterDomain: clusterMap.get(pt.clusterId) || "未命名山峰",
+			});
+		}
+
+		scoredItems.sort((a, b) => b.similarity - a.similarity);
+		return scoredItems.slice(0, 8);
+	}
+
+	private cosineSimilarity(a: number[], b: number[]): number {
+		if (a.length !== b.length || a.length === 0) return 0;
+		let dot = 0;
+		let normA = 0;
+		let normB = 0;
+		for (let i = 0; i < a.length; i++) {
+			dot += a[i] * b[i];
+			normA += a[i] * a[i];
+			normB += b[i] * b[i];
+		}
+		if (normA <= 0 || normB <= 0) return 0;
+		return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 	}
 
 	async activateView(): Promise<void> {
@@ -307,6 +384,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 				mapData: mapData,
 				localPlotlyUrl: "./plotly.min.js",
 				showTimeSlider: this.settings.showTimeSlider,
+				locale: this.settings.locale === "en" ? "en" : "zh",
 			});
 			mapData.htmlContent = standaloneHtml;
 

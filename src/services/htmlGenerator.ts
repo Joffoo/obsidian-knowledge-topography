@@ -7,12 +7,18 @@ export interface HtmlGeneratorOptions {
 	mapData: MapData;
 	localPlotlyUrl?: string | null;
 	showTimeSlider?: boolean;
+	locale?: "zh" | "en";
 }
 
 export class HtmlMapGenerator {
 	static generate(options: HtmlGeneratorOptions): string {
 		const { vaultName, initialStyle, mapData, localPlotlyUrl } = options;
 		const showTimeSlider = options.showTimeSlider !== false;
+		const isZh = options.locale !== "en";
+		const searchPlaceholder = isZh ? "输入内容语义寻山..." : "Semantic search in topography...";
+		const searchBtnTitle = isZh ? "搜索" : "Search";
+		const clearBtnTitle = isZh ? "清空" : "Clear";
+		const toggleBtnTitle = isZh ? "展开/收起结果" : "Toggle results";
 		const styleKey = THEMES[initialStyle] ? initialStyle : "shanshui";
 		const theme = getTheme(styleKey);
 
@@ -306,6 +312,193 @@ export class HtmlMapGenerator {
             opacity: 0.75;
             text-transform: uppercase;
             transition: color 0.3s ease;
+        }
+
+        /* Semantic Search Capsule (huashu-design) */
+        #search-capsule-container {
+            position: absolute;
+            top: 78px;
+            left: 40px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        #search-capsule {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: ${isDark ? "rgba(20, 20, 25, 0.75)" : "rgba(255, 255, 255, 0.88)"};
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)"};
+            border-radius: 24px;
+            padding: 5px 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 270px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #search-capsule:focus-within {
+            width: 330px;
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.16);
+            border-color: ${theme.accentColor};
+        }
+        .search-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.65;
+            color: ${isDark ? "#FFFFFF" : theme.inkColor};
+            flex-shrink: 0;
+        }
+        #search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 12px;
+            font-family: inherit;
+            color: ${isDark ? "#FFFFFF" : theme.inkColor};
+            min-width: 0;
+        }
+        #search-input::placeholder {
+            color: ${isDark ? "rgba(255, 255, 255, 0.45)" : "rgba(0, 0, 0, 0.4)"};
+            font-size: 11px;
+        }
+        .search-btn {
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px;
+            border-radius: 50%;
+            opacity: 0.6;
+            color: ${isDark ? "#FFFFFF" : theme.inkColor};
+            transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+            flex-shrink: 0;
+        }
+        .search-btn:hover {
+            opacity: 1;
+            background: ${isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)"};
+            transform: scale(1.08);
+        }
+        #search-toggle-icon {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .search-toggle-collapsed #search-toggle-icon {
+            transform: rotate(180deg);
+        }
+        #search-results-panel {
+            display: none;
+            flex-direction: column;
+            width: 330px;
+            max-height: 380px;
+            background: ${isDark ? "rgba(18, 18, 24, 0.92)" : "rgba(255, 255, 255, 0.94)"};
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)"};
+            border-radius: 16px;
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            animation: searchFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #search-results-panel.active {
+            display: flex;
+        }
+        @keyframes searchFadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        #search-status-bar {
+            padding: 9px 14px;
+            font-size: 11px;
+            opacity: 0.75;
+            border-bottom: 1px solid ${isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)"};
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #search-results-list {
+            overflow-y: auto;
+            max-height: 320px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        #search-results-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        #search-results-list::-webkit-scrollbar-thumb {
+            background: ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.15)"};
+            border-radius: 4px;
+        }
+        .search-result-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            background: transparent;
+            transition: background 0.18s ease, transform 0.18s ease;
+        }
+        .search-result-item:hover, .search-result-item.selected {
+            background: ${isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"};
+            transform: translateX(2px);
+        }
+        .search-item-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .search-item-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: ${isDark ? "#FFFFFF" : theme.inkColor};
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .search-item-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 10px;
+            background: ${theme.accentColor}22;
+            color: ${theme.accentColor};
+            flex-shrink: 0;
+            border: 1px solid ${theme.accentColor}44;
+        }
+        .search-item-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 10px;
+            opacity: 0.65;
+            color: ${isDark ? "#CCCCCC" : theme.secondaryColor};
+        }
+        .search-item-domain {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 180px;
+        }
+        .search-item-folder {
+            font-family: monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100px;
         }
 
         /* Top Right Style Switcher Capsule (huashu-design) */
@@ -687,6 +880,34 @@ export class HtmlMapGenerator {
         <div id="brand-sub">${brandSubtitle}</div>
     </div>
 
+    <!-- Semantic Search Capsule (huashu-design) -->
+    <div id="search-capsule-container">
+        <div id="search-capsule">
+            <span class="search-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </span>
+            <input type="text" id="search-input" placeholder="${searchPlaceholder}" autocomplete="off" spellcheck="false" />
+            <button id="search-clear-btn" class="search-btn" title="${clearBtnTitle}" style="display:none;">✕</button>
+            <button id="search-submit-btn" class="search-btn" title="${searchBtnTitle}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+            <button id="search-toggle-btn" class="search-btn" title="${toggleBtnTitle}" style="display:none;">
+                <svg id="search-toggle-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+            </button>
+        </div>
+        <div id="search-results-panel">
+            <div id="search-status-bar" style="display:none;"></div>
+            <div id="search-results-list"></div>
+        </div>
+    </div>
+
     <div id="style-switcher-capsule">
         <button id="reset-view-btn" class="capsule-btn" title="回归全貌视图 (Reset Overview)">⟲</button>
         <div class="capsule-divider"></div>
@@ -796,6 +1017,27 @@ export class HtmlMapGenerator {
                 if (resetBtnEl) resetBtnEl.style.color = isDark ? '#FFFFFF' : theme.ink_color;
             }
 
+            // Update search capsule appearance
+            const searchCapsule = document.getElementById('search-capsule');
+            const searchResultsPanel = document.getElementById('search-results-panel');
+            const searchInput = document.getElementById('search-input');
+            const searchIcon = document.querySelector('.search-icon');
+            if (searchCapsule) {
+                searchCapsule.style.background = isDark ? 'rgba(20, 20, 25, 0.75)' : 'rgba(255, 255, 255, 0.88)';
+                searchCapsule.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)';
+            }
+            if (searchResultsPanel) {
+                searchResultsPanel.style.background = isDark ? 'rgba(18, 18, 24, 0.92)' : 'rgba(255, 255, 255, 0.94)';
+                searchResultsPanel.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)';
+                searchResultsPanel.style.color = isDark ? '#E0E0E0' : theme.ink_color;
+            }
+            if (searchInput) {
+                searchInput.style.color = isDark ? '#FFFFFF' : theme.ink_color;
+            }
+            if (searchIcon) {
+                searchIcon.style.color = isDark ? '#FFFFFF' : theme.ink_color;
+            }
+
             // 4. Update dynamic custom CSS
             const customStyleEl = document.getElementById('theme-custom-style');
             if (customStyleEl) {
@@ -892,6 +1134,28 @@ export class HtmlMapGenerator {
                 }
             }
 
+            // Update search spotlight trace color if active
+            const spotlightIdx = plotEl.data.findIndex(function(t) { return t.name === '__search_spotlight__'; });
+            if (spotlightIdx !== -1 && plotEl.data[spotlightIdx].marker) {
+                plotEl.data[spotlightIdx].marker.color = theme.accent_color;
+                if (plotEl.data[spotlightIdx].textfont) {
+                    plotEl.data[spotlightIdx].textfont.color = theme.accent_color;
+                }
+            }
+            // Update radar probe trace color if active
+            const radarIdx = plotEl.data.findIndex(function(t) { return t.name === '__radar_probe__'; });
+            if (radarIdx !== -1 && plotEl.data[radarIdx].marker) {
+                plotEl.data[radarIdx].marker.color = [theme.accent_color, theme.accent_color];
+            }
+
+            // Update result badges in DOM if active
+            const resultBadges = document.querySelectorAll('.search-item-badge');
+            resultBadges.forEach(function(b) {
+                b.style.background = theme.accent_color + '22';
+                b.style.color = theme.accent_color;
+                b.style.borderColor = theme.accent_color + '44';
+            });
+
             // Single atomic render transaction via Plotly.react
             Plotly.react(plotEl, plotEl.data, plotEl.layout);
 
@@ -986,6 +1250,14 @@ export class HtmlMapGenerator {
                 function removeRadarTrace(plotEl) {
                     if (!plotEl || !plotEl.data) return;
                     const existingIdx = plotEl.data.findIndex(t => t.name === '__radar_probe__');
+                    if (existingIdx !== -1) {
+                        Plotly.deleteTraces(plotEl, existingIdx);
+                    }
+                }
+
+                function removeSearchSpotlight(plotEl) {
+                    if (!plotEl || !plotEl.data) return;
+                    const existingIdx = plotEl.data.findIndex(t => t.name === '__search_spotlight__');
                     if (existingIdx !== -1) {
                         Plotly.deleteTraces(plotEl, existingIdx);
                     }
@@ -1108,6 +1380,225 @@ export class HtmlMapGenerator {
                         hudEl.classList.add('active');
                     }
                 }
+
+                // ==========================================
+                // Semantic Topographic Search (语义寻山)
+                // ==========================================
+                let lastSearchResults = null;
+                let lastSelectedResultIndex = 0;
+
+                const searchInput = document.getElementById('search-input');
+                const searchSubmitBtn = document.getElementById('search-submit-btn');
+                const searchClearBtn = document.getElementById('search-clear-btn');
+                const searchToggleBtn = document.getElementById('search-toggle-btn');
+                const searchResultsPanel = document.getElementById('search-results-panel');
+                const searchStatusBar = document.getElementById('search-status-bar');
+                const searchResultsList = document.getElementById('search-results-list');
+                const IS_ZH = ${isZh};
+
+                function setPanelExpanded(expanded) {
+                    if (!searchResultsPanel) return;
+                    if (expanded) {
+                        searchResultsPanel.classList.add('active');
+                        if (searchToggleBtn) {
+                            searchToggleBtn.classList.remove('search-toggle-collapsed');
+                            searchToggleBtn.title = IS_ZH ? '收起搜索结果' : 'Collapse results';
+                        }
+                    } else {
+                        searchResultsPanel.classList.remove('active');
+                        if (searchToggleBtn) {
+                            searchToggleBtn.classList.add('search-toggle-collapsed');
+                            searchToggleBtn.title = IS_ZH ? '展开搜索结果' : 'Expand results';
+                        }
+                    }
+                }
+
+                function triggerSearch() {
+                    if (!searchInput) return;
+                    const query = searchInput.value.trim();
+                    if (!query) return;
+
+                    if (searchStatusBar && searchResultsPanel && searchResultsList) {
+                        setPanelExpanded(true);
+                        searchStatusBar.style.display = 'flex';
+                        searchStatusBar.innerHTML = '<span style="display:inline-block; font-size:13px; animation: spin 1s linear infinite;">🧭</span> ' + (IS_ZH ? '正在理解并寻山...' : 'Searching terrain...');
+                        searchResultsList.innerHTML = '';
+                    }
+
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'km_search_query', query: query }, '*');
+                    }
+                }
+
+                function closeSearch() {
+                    setPanelExpanded(false);
+                    removeSearchSpotlight(plotEl);
+                    lastSearchResults = null;
+                    if (searchToggleBtn) searchToggleBtn.style.display = 'none';
+                }
+
+                if (searchInput) {
+                    searchInput.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            triggerSearch();
+                        } else if (e.key === 'Escape') {
+                            setPanelExpanded(false);
+                        }
+                    });
+
+                    searchInput.addEventListener('input', function() {
+                        if (searchClearBtn) {
+                            searchClearBtn.style.display = searchInput.value ? 'flex' : 'none';
+                        }
+                    });
+
+                    searchInput.addEventListener('focus', function() {
+                        if (lastSearchResults && lastSearchResults.length > 0) {
+                            setPanelExpanded(true);
+                        }
+                    });
+
+                    searchInput.addEventListener('click', function() {
+                        if (lastSearchResults && lastSearchResults.length > 0) {
+                            setPanelExpanded(true);
+                        }
+                    });
+                }
+
+                if (searchSubmitBtn) {
+                    searchSubmitBtn.addEventListener('click', triggerSearch);
+                }
+
+                if (searchToggleBtn) {
+                    searchToggleBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (!lastSearchResults || lastSearchResults.length === 0) return;
+                        const isExpanded = searchResultsPanel && searchResultsPanel.classList.contains('active');
+                        setPanelExpanded(!isExpanded);
+                    });
+                }
+
+                if (searchClearBtn) {
+                    searchClearBtn.addEventListener('click', function() {
+                        if (searchInput) {
+                            searchInput.value = '';
+                            searchClearBtn.style.display = 'none';
+                        }
+                        closeSearch();
+                    });
+                }
+
+                window.addEventListener('message', function(event) {
+                    const data = event.data;
+                    if (!data) return;
+
+                    if (data.type === 'km_focus_search') {
+                        if (searchInput) {
+                            searchInput.focus();
+                            searchInput.select();
+                        }
+                    } else if (data.type === 'km_search_results') {
+                        if (!searchResultsPanel || !searchStatusBar || !searchResultsList) return;
+
+                        if (data.error) {
+                            setPanelExpanded(true);
+                            searchStatusBar.style.display = 'flex';
+                            searchStatusBar.textContent = data.error;
+                            searchResultsList.innerHTML = '';
+                            if (searchToggleBtn) searchToggleBtn.style.display = 'none';
+                            return;
+                        }
+
+                        const results = data.results || [];
+                        lastSearchResults = results;
+                        lastSelectedResultIndex = 0;
+                        if (results.length === 0) {
+                            setPanelExpanded(true);
+                            searchStatusBar.style.display = 'flex';
+                            searchStatusBar.textContent = IS_ZH ? '地貌中未探寻到相关山峰' : 'No related summits found';
+                            searchResultsList.innerHTML = '';
+                            removeSearchSpotlight(plotEl);
+                            if (searchToggleBtn) searchToggleBtn.style.display = 'none';
+                            return;
+                        }
+
+                        if (searchToggleBtn) {
+                            searchToggleBtn.style.display = 'flex';
+                        }
+                        setPanelExpanded(true);
+
+                        searchStatusBar.style.display = 'flex';
+                        searchStatusBar.innerHTML = (IS_ZH ? '探寻到 ' : 'Found ') + results.length + (IS_ZH ? ' 处相关山脉知识' : ' summits');
+                        searchResultsList.innerHTML = '';
+
+                        const currentStyleKey = (selectEl ? selectEl.value : null) || INITIAL_STYLE;
+                        const curTheme = THEMES_DATA[currentStyleKey] || THEMES_DATA['shanshui'];
+                        const accentColor = curTheme.accent_color || '#D9534F';
+
+                        // 1. Draw Spotlight Trace for all results
+                        removeSearchSpotlight(plotEl);
+                        const spotlightTrace = {
+                            name: '__search_spotlight__',
+                            type: 'scatter',
+                            x: results.map(function(r) { return r.x; }),
+                            y: results.map(function(r) { return r.y; }),
+                            mode: 'markers+text',
+                            showlegend: false,
+                            hoverinfo: 'text',
+                            hovertext: results.map(function(r) { return r.title + ' (' + r.similarityPercent + '%)'; }),
+                            text: results.map(function(r, i) { return '#' + (i + 1); }),
+                            textposition: 'bottom center',
+                            textfont: { size: 10, color: accentColor },
+                            marker: {
+                                size: results.map(function(r, i) { return i === 0 ? 28 : Math.max(16, Math.round(r.similarityPercent * 0.28)); }),
+                                color: accentColor,
+                                opacity: 0.45,
+                                line: {
+                                    width: 1.5,
+                                    color: '#FFFFFF'
+                                }
+                            }
+                        };
+                        Plotly.addTraces(plotEl, spotlightTrace);
+
+                        // 2. Render item list
+                        results.forEach(function(item, index) {
+                            const itemEl = document.createElement('div');
+                            itemEl.className = 'search-result-item' + (index === 0 ? ' selected' : '');
+                            itemEl.innerHTML = \`
+                                <div class="search-item-top">
+                                    <span class="search-item-title" title="\${item.title}">\${item.title}</span>
+                                    <span class="search-item-badge" style="background:\${accentColor}22; color:\${accentColor}; border:1px solid \${accentColor}44;">\${item.similarityPercent}% \${IS_ZH ? '匹配' : ''}</span>
+                                </div>
+                                <div class="search-item-bottom">
+                                    <span class="search-item-domain">⛰️ \${item.clusterDomain}</span>
+                                    <span class="search-item-folder">\${item.folder}</span>
+                                </div>
+                            \`;
+
+                            itemEl.addEventListener('click', function() {
+                                const prevSelected = searchResultsList.querySelector('.selected');
+                                if (prevSelected) prevSelected.classList.remove('selected');
+                                itemEl.classList.add('selected');
+                                lastSelectedResultIndex = index;
+                                locateNoteOnMap(item.path);
+                            });
+
+                            itemEl.addEventListener('dblclick', function() {
+                                const url = 'obsidian://open?vault=' + encodeURIComponent(VAULT_NAME) + '&file=' + encodeURIComponent(item.path);
+                                if (window.parent && window.parent !== window) {
+                                    window.parent.postMessage({ type: 'km_open_note', url: url }, '*');
+                                }
+                            });
+
+                            searchResultsList.appendChild(itemEl);
+                        });
+
+                        // 3. Automatically locate Top 1 match
+                        locateNoteOnMap(results[0].path);
+                    }
+                });
 
                 // ==========================================
                 // Geological Evolution History (时光滑块)

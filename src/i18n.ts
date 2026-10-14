@@ -109,6 +109,15 @@ export const STRINGS = {
 		stage_embed: "分析内容",
 		stage_spatial: "绘制地势",
 		stage_peaks: "山峰命名",
+
+		// Search
+		search_placeholder: "输入内容语义寻山...",
+		search_btn: "搜索",
+		search_searching: "正在理解并寻山...",
+		search_no_results: "未探寻到相关知识山峰",
+		search_not_built: "请先生成地貌图后再搜索",
+		cmd_search: "在知识地貌中搜索",
+		search_match: "匹配度",
 	},
 	en: {
 		// Settings Tab
@@ -201,6 +210,15 @@ export const STRINGS = {
 		stage_embed: "Analyzing Notes",
 		stage_spatial: "Plotting Contours",
 		stage_peaks: "Naming Summits",
+
+		// Search
+		search_placeholder: "Search landscape semantically...",
+		search_btn: "Search",
+		search_searching: "Searching terrain...",
+		search_no_results: "No relevant summits found",
+		search_not_built: "Please build map first",
+		cmd_search: "Search in Knowledge Topography",
+		search_match: "Match",
 	},
 };
 

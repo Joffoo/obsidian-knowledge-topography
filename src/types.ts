@@ -108,6 +108,18 @@ export interface ThemeConfig {
 	isDark?: boolean;
 }
 
+export interface SemanticSearchResultItem {
+	path: string;
+	title: string;
+	folder: string;
+	similarity: number;
+	similarityPercent: number;
+	x: number;
+	y: number;
+	clusterId: number;
+	clusterDomain: string;
+}
+
 export interface MapData {
 	points: Point2D[];
 	clusters: PeakCluster[];

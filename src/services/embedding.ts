@@ -156,6 +156,75 @@ export class EmbeddingService {
 		}
 	}
 
+	async computeQueryEmbedding(query: string): Promise<number[]> {
+		const trimmed = query.trim();
+		if (!trimmed) {
+			throw new Error("搜索内容不能为空。");
+		}
+
+		if (this.settings.embeddingMode === "openai-api") {
+			if (!this.settings.apiBaseUrl) {
+				throw new Error("请先填写服务地址 (API Base URL)。");
+			}
+			if (!this.settings.embeddingModelName) {
+				throw new Error("请先填写模型名称 (Model Name)。");
+			}
+
+			const baseUrl = this.settings.apiBaseUrl.replace(/\/+$/, "");
+			const endpoint = `${baseUrl}/embeddings`;
+			const headers: Record<string, string> = { "Content-Type": "application/json" };
+			if (this.settings.apiKey) {
+				headers["Authorization"] = `Bearer ${this.settings.apiKey}`;
+			}
+
+			const response = await requestUrl({
+				url: endpoint,
+				method: "POST",
+				headers: headers,
+				body: JSON.stringify({
+					input: [trimmed],
+					model: this.settings.embeddingModelName,
+				}),
+				throw: false,
+			});
+
+			if (response.status !== 200) {
+				let errDetail = "";
+				try {
+					const j = response.json as Record<string, unknown> | null;
+					if (j?.message) errDetail = `: ${String(j.message)}`;
+				} catch {
+					// JSON parse failed
+				}
+				if (!errDetail && response.text) errDetail = `: ${response.text.slice(0, 100)}`;
+				throw new Error(`HTTP ${response.status}${errDetail}`);
+			}
+
+			const data = response.json as { data?: { embedding?: number[] }[] } | null;
+			if (!data?.data || !Array.isArray(data.data) || !data.data[0]?.embedding) {
+				throw new Error("API 返回向量格式异常。");
+			}
+
+			return data.data[0].embedding;
+		} else {
+			const dummyNote: NoteItem = {
+				path: "__query__",
+				title: "",
+				folder: "",
+				mtime: 0,
+				ctime: 0,
+				size: 0,
+				contentSnippet: trimmed,
+			};
+			const resMap = await this.computeViaLocalPath([dummyNote]);
+			const vec = resMap.get("__query__");
+			if (!vec || vec.length === 0) {
+				throw new Error("本地模型未返回查询向量。");
+			}
+			return vec;
+		}
+	}
+
 	private async computeViaApi(
 		notes: NoteItem[],
 		onProgress?: EmbeddingProgressCallback

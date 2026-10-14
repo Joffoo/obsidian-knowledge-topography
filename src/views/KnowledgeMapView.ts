@@ -39,6 +39,10 @@ export class KnowledgeMapView extends ItemView {
 		const i18n = t(this.plugin.settings.locale);
 
 		// Header Actions (Native Obsidian Icons)
+		this.addAction("search", i18n.cmd_search, () => {
+			this.focusSearch();
+		});
+
 		this.addAction("refresh-cw", i18n.cmd_rebuild, async () => {
 			await this.plugin.generateMap();
 		});
@@ -108,6 +112,25 @@ export class KnowledgeMapView extends ItemView {
 			} else if (data.type === "km_theme_change" && typeof data.theme === "string") {
 				this.plugin.settings.currentTheme = data.theme;
 				void this.plugin.saveSettings();
+			} else if (data.type === "km_search_query" && typeof data.query === "string") {
+				void (async () => {
+					try {
+						const results = await this.plugin.searchTopography(data.query as string);
+						this.iframeEl.contentWindow?.postMessage({
+							type: "km_search_results",
+							query: data.query,
+							results,
+						}, "*");
+					} catch (err: unknown) {
+						const msg = err instanceof Error ? err.message : String(err);
+						this.iframeEl.contentWindow?.postMessage({
+							type: "km_search_results",
+							query: data.query,
+							results: [],
+							error: msg,
+						}, "*");
+					}
+				})();
 			}
 		};
 
@@ -244,6 +267,7 @@ export class KnowledgeMapView extends ItemView {
 			mapData: mapData,
 			localPlotlyUrl: localPlotlyUrl,
 			showTimeSlider: this.plugin.settings.showTimeSlider,
+			locale: this.plugin.settings.locale === "en" ? "en" : "zh",
 		});
 
 		this.iframeEl.srcdoc = html;
@@ -264,6 +288,12 @@ export class KnowledgeMapView extends ItemView {
 	locateNote(path: string): boolean {
 		if (!this.iframeEl || !this.iframeEl.contentWindow) return false;
 		this.iframeEl.contentWindow.postMessage({ type: "km_locate_note", path }, "*");
+		return true;
+	}
+
+	focusSearch(): boolean {
+		if (!this.iframeEl || !this.iframeEl.contentWindow) return false;
+		this.iframeEl.contentWindow.postMessage({ type: "km_focus_search" }, "*");
 		return true;
 	}
 }
