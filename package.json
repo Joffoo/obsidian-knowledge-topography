@@ -1,6 +1,6 @@
 {
   "name": "knowledge-topography",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Interactive semantic topographic contour map for your vault. Explore note density, clusters, and peaks as a living landscape.",
   "main": "main.js",
   "scripts": {

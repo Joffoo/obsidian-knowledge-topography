@@ -252,6 +252,7 @@ export class KnowledgeMapView extends ItemView {
 					pt.ctime = Date.now();
 				}
 			}
+			mapData.links = this.plugin.extractVaultLinks(mapData.points);
 		}
 
 		const pluginDir = this.plugin.manifest.dir ?? `${this.app.vault.configDir}/plugins/knowledge-topography`;
@@ -294,6 +295,12 @@ export class KnowledgeMapView extends ItemView {
 	focusSearch(): boolean {
 		if (!this.iframeEl || !this.iframeEl.contentWindow) return false;
 		this.iframeEl.contentWindow.postMessage({ type: "km_focus_search" }, "*");
+		return true;
+	}
+
+	toggleWikilinks(): boolean {
+		if (!this.iframeEl || !this.iframeEl.contentWindow) return false;
+		this.iframeEl.contentWindow.postMessage({ type: "km_toggle_wikilinks" }, "*");
 		return true;
 	}
 }

@@ -19,6 +19,11 @@ export class HtmlMapGenerator {
 		const searchBtnTitle = isZh ? "搜索" : "Search";
 		const clearBtnTitle = isZh ? "清空" : "Clear";
 		const toggleBtnTitle = isZh ? "展开/收起结果" : "Toggle results";
+		const wikilinksBtnTitle = isZh ? "显示双链网络" : "Show Wikilinks Network";
+		const semanticNeighborsTitle = isZh ? "🧭 语义近邻" : "🧭 Semantic Neighbors";
+		const semanticNeighborsBadge = isZh ? "Top 3 隐式相似" : "Top 3 Proximity";
+		const wikilinksSectionTitle = isZh ? "🔗 双向链接" : "🔗 Wikilinks Network";
+		const summitDomainLabel = isZh ? "所属山峰:" : "Summit Domain:";
 		const styleKey = THEMES[initialStyle] ? initialStyle : "shanshui";
 		const theme = getTheme(styleKey);
 
@@ -264,6 +269,12 @@ export class HtmlMapGenerator {
 		const gridBoundsJson = JSON.stringify(mapData.gridBounds || [-0.15, 1.15]);
 		const uniqueFoldersJson = JSON.stringify(uniqueFolders);
 		const initialDensityGridJson = JSON.stringify(mapData.densityGrid);
+		const allLinksJson = JSON.stringify(
+			(mapData.links || []).map((l) => ({
+				s: l.source,
+				t: l.target,
+			}))
+		);
 
 		return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -535,11 +546,17 @@ export class HtmlMapGenerator {
             opacity: 0.75;
             color: inherit;
             border-radius: 4px;
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
         }
         .capsule-btn:hover {
             opacity: 1;
             transform: scale(1.1);
+        }
+        .capsule-btn[aria-pressed="true"] {
+            opacity: 1;
+        }
+        .scatterlayer .trace.lines path {
+            pointer-events: none !important;
         }
         .capsule-divider {
             width: 1px;
@@ -617,13 +634,15 @@ export class HtmlMapGenerator {
             bottom: 30px;
             left: 36px;
             z-index: 1000;
-            max-width: 340px;
+            width: 320px;
+            max-width: calc(100vw - 72px);
+            max-height: 480px;
             background: ${isDark ? "rgba(18, 18, 24, 0.88)" : "rgba(255, 255, 255, 0.92)"};
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid ${isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)"};
             border-radius: 16px;
-            padding: 14px 18px;
+            padding: 14px 16px;
             box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
             font-size: 12px;
             color: ${isDark ? "#E0E0E0" : theme.inkColor};
@@ -675,8 +694,18 @@ export class HtmlMapGenerator {
         .hud-body {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 10px;
             line-height: 1.5;
+            overflow-y: auto;
+            max-height: 400px;
+            padding-right: 2px;
+        }
+        .hud-body::-webkit-scrollbar {
+            width: 3px;
+        }
+        .hud-body::-webkit-scrollbar-thumb {
+            background: ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.15)"};
+            border-radius: 2px;
         }
         .hud-row {
             display: flex;
@@ -695,13 +724,47 @@ export class HtmlMapGenerator {
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        .hud-neighbors-list {
-            margin-top: 4px;
+        .hud-section {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .hud-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .hud-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0.85;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .hud-section-badge {
+            font-size: 10px;
+            opacity: 0.5;
+            font-family: monospace;
+        }
+        .hud-neighbors-list, .hud-wikilinks-list {
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
-        .hud-neighbor-item {
+        .hud-wikilinks-list {
+            max-height: 120px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+        .hud-wikilinks-list::-webkit-scrollbar {
+            width: 3px;
+        }
+        .hud-wikilinks-list::-webkit-scrollbar-thumb {
+            background: ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.15)"};
+            border-radius: 2px;
+        }
+        .hud-neighbor-item, .hud-link-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -713,22 +776,49 @@ export class HtmlMapGenerator {
             text-decoration: none;
             color: inherit;
         }
-        .hud-neighbor-item:hover {
+        .hud-neighbor-item:hover, .hud-link-item:hover {
             background: ${isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.07)"};
             transform: translateX(2px);
         }
-        .hud-neighbor-title {
+        .hud-neighbor-title, .hud-link-title {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             font-size: 11px;
-            max-width: 220px;
+            flex: 1;
         }
         .hud-neighbor-dist {
             font-size: 10px;
-            opacity: 0.5;
+            opacity: 0.55;
             font-family: monospace;
             margin-left: 6px;
+            flex-shrink: 0;
+        }
+        .hud-link-badge {
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            margin-left: 6px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+        .hud-link-out {
+            color: ${isDark ? "#81A1C1" : "#2E6B9E"};
+            background: ${isDark ? "rgba(129, 161, 193, 0.18)" : "rgba(46, 107, 158, 0.12)"};
+        }
+        .hud-link-in {
+            color: ${isDark ? "#A3BE8C" : "#3B7A57"};
+            background: ${isDark ? "rgba(163, 190, 140, 0.18)" : "rgba(59, 122, 87, 0.12)"};
+        }
+        .hud-link-bi {
+            color: ${isDark ? "#EBCB8B" : "#B8860B"};
+            background: ${isDark ? "rgba(235, 203, 139, 0.18)" : "rgba(184, 134, 11, 0.12)"};
+        }
+        .hud-empty-hint {
+            font-size: 10px;
+            opacity: 0.45;
+            padding: 4px 6px;
+            font-style: italic;
         }
 
         /* Time Evolution Slider Capsule (huashu-design) */
@@ -910,6 +1000,12 @@ export class HtmlMapGenerator {
 
     <div id="style-switcher-capsule">
         <button id="reset-view-btn" class="capsule-btn" title="回归全貌视图 (Reset Overview)">⟲</button>
+        <button id="wikilinks-toggle-btn" class="capsule-btn" title="${wikilinksBtnTitle}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+        </button>
         <div class="capsule-divider"></div>
         <span class="capsule-icon">🧭</span>
         <select id="style-select" title="切换地貌视觉风格">
@@ -928,12 +1024,26 @@ export class HtmlMapGenerator {
         </div>
         <div class="hud-body">
             <div class="hud-row">
-                <span class="hud-label">所属山峰:</span>
+                <span class="hud-label">${summitDomainLabel}</span>
                 <span class="hud-value" id="hud-peak-domain">--</span>
             </div>
-            <div>
-                <div class="hud-label" style="margin-bottom: 3px;">语义近邻:</div>
+
+            <!-- 主打：语义近邻 -->
+            <div class="hud-section">
+                <div class="hud-section-header">
+                    <span class="hud-section-title">${semanticNeighborsTitle}</span>
+                    <span class="hud-section-badge">${semanticNeighborsBadge}</span>
+                </div>
                 <div class="hud-neighbors-list" id="hud-neighbors"></div>
+            </div>
+
+            <!-- 补充：双向链接 -->
+            <div class="hud-section">
+                <div class="hud-section-header">
+                    <span class="hud-section-title">${wikilinksSectionTitle}</span>
+                    <span class="hud-section-badge" id="hud-wikilinks-count">0</span>
+                </div>
+                <div class="hud-wikilinks-list" id="hud-wikilinks"></div>
             </div>
         </div>
     </div>
@@ -969,6 +1079,7 @@ export class HtmlMapGenerator {
 
     <script>
         const VAULT_NAME = ${JSON.stringify(vaultName)};
+        const IS_ZH = ${isZh};
         const INITIAL_STYLE = ${JSON.stringify(styleKey)};
         const THEMES_DATA = ${themesDataJson};
         const PEAKS_DATA = ${peaksDataJson};
@@ -982,6 +1093,105 @@ export class HtmlMapGenerator {
         const INITIAL_X_RANGE = ${JSON.stringify(xRange)};
         const INITIAL_Y_RANGE = ${JSON.stringify(yRange)};
         const SHOW_TIME_SLIDER = ${showTimeSlider};
+        const ALL_LINKS = ${allLinksJson};
+        let isWikilinksVisible = false;
+
+        function normalizePath(p) {
+            if (!p) return '';
+            return p.split('\\\\').join('/');
+        }
+
+        const PATH_COORD_MAP = new Map();
+        for (let i = 0; i < ALL_POINTS.length; i++) {
+            const p = ALL_POINTS[i];
+            PATH_COORD_MAP.set(normalizePath(p.path), p);
+        }
+
+        function getWikilinksLineColor(theme) {
+            const isDark = ['#050505', '#040208', '#0A192F', '#111111'].includes(theme.bg_color);
+            return isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(30, 40, 60, 0.25)';
+        }
+
+        function buildWikilinksTrace(activePathSet) {
+            const curKey = (document.getElementById('style-select') ? document.getElementById('style-select').value : null) || INITIAL_STYLE;
+            const curTheme = THEMES_DATA[curKey] || THEMES_DATA['shanshui'];
+            const x = [];
+            const y = [];
+            const drawnEdges = new Set();
+            for (let i = 0; i < ALL_LINKS.length; i++) {
+                const link = ALL_LINKS[i];
+                const normS = normalizePath(link.s);
+                const normT = normalizePath(link.t);
+                if (activePathSet && (!activePathSet.has(normS) || !activePathSet.has(normT))) {
+                    continue;
+                }
+                const edgeKey = normS < normT ? normS + '::' + normT : normT + '::' + normS;
+                if (drawnEdges.has(edgeKey)) continue;
+                drawnEdges.add(edgeKey);
+
+                const p1 = PATH_COORD_MAP.get(normS);
+                const p2 = PATH_COORD_MAP.get(normT);
+                if (p1 && p2) {
+                    x.push(p1.x, p2.x, null);
+                    y.push(p1.y, p2.y, null);
+                }
+            }
+            return {
+                name: '__wikilinks_network__',
+                type: 'scatter',
+                mode: 'lines',
+                x: x,
+                y: y,
+                line: {
+                    color: getWikilinksLineColor(curTheme),
+                    width: 0.8
+                },
+                hoverinfo: 'none',
+                showlegend: false
+            };
+        }
+
+        function toggleWikilinks(forceState) {
+            const plotEl = document.getElementById('map-plot');
+            if (!plotEl || !plotEl.data) return;
+            isWikilinksVisible = (typeof forceState === 'boolean') ? forceState : !isWikilinksVisible;
+
+            const curKey = (document.getElementById('style-select') ? document.getElementById('style-select').value : null) || INITIAL_STYLE;
+            const curTheme = THEMES_DATA[curKey] || THEMES_DATA['shanshui'];
+            const isDark = ['#050505', '#040208', '#0A192F', '#111111'].includes(curTheme.bg_color);
+
+            const btn = document.getElementById('wikilinks-toggle-btn');
+            if (btn) {
+                if (isWikilinksVisible) {
+                    btn.style.color = curTheme.accent_color;
+                    btn.style.background = curTheme.accent_color + '22';
+                    btn.setAttribute('aria-pressed', 'true');
+                } else {
+                    btn.style.color = isDark ? '#FFFFFF' : curTheme.ink_color;
+                    btn.style.background = 'transparent';
+                    btn.setAttribute('aria-pressed', 'false');
+                }
+            }
+
+            const existingIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
+            if (isWikilinksVisible) {
+                let activePathSet = null;
+                const timeSlider = document.getElementById('time-slider-input');
+                if (timeSlider && window.__currentActivePathSet) {
+                    activePathSet = window.__currentActivePathSet;
+                }
+                const trace = buildWikilinksTrace(activePathSet);
+                if (existingIdx !== -1) {
+                    Plotly.restyle(plotEl, { x: [trace.x], y: [trace.y], 'line.color': [trace.line.color] }, [existingIdx]);
+                } else {
+                    Plotly.addTraces(plotEl, trace);
+                }
+            } else {
+                if (existingIdx !== -1) {
+                    Plotly.deleteTraces(plotEl, existingIdx);
+                }
+            }
+        }
 
         function applyTheme(styleKey) {
             const theme = THEMES_DATA[styleKey] || THEMES_DATA['shanshui'];
@@ -1015,6 +1225,16 @@ export class HtmlMapGenerator {
                 if (divider) divider.style.background = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
                 const resetBtnEl = document.getElementById('reset-view-btn');
                 if (resetBtnEl) resetBtnEl.style.color = isDark ? '#FFFFFF' : theme.ink_color;
+                const wikilinksBtnEl = document.getElementById('wikilinks-toggle-btn');
+                if (wikilinksBtnEl) {
+                    if (isWikilinksVisible) {
+                        wikilinksBtnEl.style.color = theme.accent_color;
+                        wikilinksBtnEl.style.background = theme.accent_color + '22';
+                    } else {
+                        wikilinksBtnEl.style.color = isDark ? '#FFFFFF' : theme.ink_color;
+                        wikilinksBtnEl.style.background = 'transparent';
+                    }
+                }
             }
 
             // Update search capsule appearance
@@ -1147,6 +1367,11 @@ export class HtmlMapGenerator {
             if (radarIdx !== -1 && plotEl.data[radarIdx].marker) {
                 plotEl.data[radarIdx].marker.color = [theme.accent_color, theme.accent_color];
             }
+            // Update wikilinks trace color if active
+            const wikilinksIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
+            if (wikilinksIdx !== -1 && plotEl.data[wikilinksIdx].line) {
+                plotEl.data[wikilinksIdx].line.color = getWikilinksLineColor(theme);
+            }
 
             // Update result badges in DOM if active
             const resultBadges = document.querySelectorAll('.search-item-badge');
@@ -1235,16 +1460,27 @@ export class HtmlMapGenerator {
                     resetBtn.addEventListener('click', resetOverviewView);
                 }
 
+                const wikilinksBtn = document.getElementById('wikilinks-toggle-btn');
+                if (wikilinksBtn) {
+                    wikilinksBtn.addEventListener('click', function() {
+                        toggleWikilinks();
+                    });
+                }
+
                 // Double-click on blank stage to reset view
                 plotEl.on('plotly_doubleclick', function() {
                     resetOverviewView();
                 });
 
-                // Handle Locate Note messages (from Obsidian active leaf change or command)
+                // Handle Locate Note and Wikilinks messages
                 window.addEventListener('message', function(event) {
                     const data = event.data;
-                    if (!data || data.type !== 'km_locate_note' || !data.path) return;
-                    locateNoteOnMap(data.path);
+                    if (!data) return;
+                    if (data.type === 'km_locate_note' && data.path) {
+                        locateNoteOnMap(data.path);
+                    } else if (data.type === 'km_toggle_wikilinks') {
+                        toggleWikilinks();
+                    }
                 });
 
                 function removeRadarTrace(plotEl) {
@@ -1312,9 +1548,9 @@ export class HtmlMapGenerator {
                         summitDomain = cluster.domain;
                     }
 
-                    // 4. Calculate Top-3 Nearest Semantic Neighbors
+                    // 4. Calculate Top-3 Nearest Semantic Neighbors (主打)
                     const neighbors = ALL_POINTS
-                        .filter(p => p.path.split('\\\\').join('/') !== cleanTarget)
+                        .filter(p => normalizePath(p.path) !== cleanTarget)
                         .map(p => {
                             const dx = p.x - pt.x;
                             const dy = p.y - pt.y;
@@ -1327,11 +1563,58 @@ export class HtmlMapGenerator {
                         .sort((a, b) => a.dist - b.dist)
                         .slice(0, 3);
 
-                    // 5. Update and Show Radar HUD
+                    // 5. Calculate Connected Wikilinks (双向链接)
+                    const outgoingSet = new Set();
+                    const incomingSet = new Set();
+                    for (let i = 0; i < ALL_LINKS.length; i++) {
+                        const link = ALL_LINKS[i];
+                        const s = normalizePath(link.s);
+                        const t = normalizePath(link.t);
+                        if (s === cleanTarget && t !== cleanTarget) {
+                            outgoingSet.add(t);
+                        }
+                        if (t === cleanTarget && s !== cleanTarget) {
+                            incomingSet.add(s);
+                        }
+                    }
+
+                    const allConnected = new Set([...outgoingSet, ...incomingSet]);
+                    const connectedList = [];
+                    allConnected.forEach(function(p) {
+                        const isOut = outgoingSet.has(p);
+                        const isIn = incomingSet.has(p);
+                        let type = 'out';
+                        let label = IS_ZH ? '↗ 出链' : '↗ Out';
+                        if (isOut && isIn) {
+                            type = 'bi';
+                            label = IS_ZH ? '⇄ 互链' : '⇄ Both';
+                        } else if (isIn) {
+                            type = 'in';
+                            label = IS_ZH ? '↙ 反链' : '↙ In';
+                        }
+
+                        const ptObj = PATH_COORD_MAP.get(p);
+                        let title = ptObj ? ptObj.title : '';
+                        if (!title) {
+                            const lastPart = p.split('/').pop() || p;
+                            title = lastPart.endsWith('.md') ? lastPart.slice(0, -3) : lastPart;
+                        }
+
+                        connectedList.push({
+                            path: p,
+                            title: title,
+                            type: type,
+                            label: label
+                        });
+                    });
+
+                    // 6. Update and Show Radar HUD
                     if (hudEl) {
                         const noteTitleEl = document.getElementById('hud-note-title');
                         const peakDomainEl = document.getElementById('hud-peak-domain');
                         const neighborsEl = document.getElementById('hud-neighbors');
+                        const wikilinksEl = document.getElementById('hud-wikilinks');
+                        const wikilinksCountEl = document.getElementById('hud-wikilinks-count');
 
                         if (noteTitleEl) noteTitleEl.textContent = pt.title || pt.path.split('/').pop();
                         if (peakDomainEl) {
@@ -1339,6 +1622,7 @@ export class HtmlMapGenerator {
                             peakDomainEl.style.color = accentColor;
                         }
 
+                        // A. Semantic Neighbors (主打)
                         if (neighborsEl) {
                             neighborsEl.innerHTML = '';
                             neighbors.forEach(n => {
@@ -1377,6 +1661,55 @@ export class HtmlMapGenerator {
                             });
                         }
 
+                        // B. Wikilinks Network (双向链接)
+                        if (wikilinksCountEl) {
+                            wikilinksCountEl.textContent = connectedList.length + (IS_ZH ? ' 篇关联' : ' linked');
+                        }
+
+                        if (wikilinksEl) {
+                            wikilinksEl.innerHTML = '';
+                            if (connectedList.length === 0) {
+                                const emptyEl = document.createElement('div');
+                                emptyEl.className = 'hud-empty-hint';
+                                emptyEl.textContent = IS_ZH ? '暂无双链引用 (孤岛笔记)' : 'No wikilinks (Island note)';
+                                wikilinksEl.appendChild(emptyEl);
+                            } else {
+                                connectedList.forEach(function(item) {
+                                    const linkEl = document.createElement('a');
+                                    linkEl.className = 'hud-link-item';
+                                    const openUrl = 'obsidian://open?vault=' + encodeURIComponent(VAULT_NAME) + '&file=' + encodeURIComponent(item.path);
+                                    linkEl.href = openUrl;
+                                    linkEl.title = item.path;
+
+                                    const titleSpan = document.createElement('span');
+                                    titleSpan.className = 'hud-link-title';
+                                    titleSpan.textContent = item.title;
+
+                                    const badgeSpan = document.createElement('span');
+                                    badgeSpan.className = 'hud-link-badge hud-link-' + item.type;
+                                    badgeSpan.textContent = item.label;
+
+                                    linkEl.appendChild(titleSpan);
+                                    linkEl.appendChild(badgeSpan);
+
+                                    linkEl.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        try {
+                                            if (window.parent && window.parent !== window) {
+                                                window.parent.postMessage({ type: 'km_open_note', url: openUrl }, '*');
+                                            } else {
+                                                window.location.href = openUrl;
+                                            }
+                                        } catch(err) {
+                                            window.location.href = openUrl;
+                                        }
+                                    });
+
+                                    wikilinksEl.appendChild(linkEl);
+                                });
+                            }
+                        }
+
                         hudEl.classList.add('active');
                     }
                 }
@@ -1394,7 +1727,6 @@ export class HtmlMapGenerator {
                 const searchResultsPanel = document.getElementById('search-results-panel');
                 const searchStatusBar = document.getElementById('search-status-bar');
                 const searchResultsList = document.getElementById('search-results-list');
-                const IS_ZH = ${isZh};
 
                 function setPanelExpanded(expanded) {
                     if (!searchResultsPanel) return;
@@ -1772,6 +2104,14 @@ export class HtmlMapGenerator {
                                 peakTexts.push(["<span class='peak-pill-card' style='font-family:" + curTheme.font_family_web + ";'>" + innerBadge + "</span>"]);
                             }
                             Plotly.restyle(plotEl, { text: peakTexts }, peakIndices);
+                            window.__currentActivePathSet = null;
+                            if (isWikilinksVisible) {
+                                const wikilinksIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
+                                if (wikilinksIdx !== -1) {
+                                    const fullTrace = buildWikilinksTrace(null);
+                                    Plotly.restyle(plotEl, { x: [fullTrace.x], y: [fullTrace.y] }, [wikilinksIdx]);
+                                }
+                            }
                             return;
                         }
 
@@ -1795,7 +2135,8 @@ export class HtmlMapGenerator {
                         }, [0]);
 
                         // 2. Filter folder scatter points
-                        const activePathSet = new Set(activePoints.map(function(p) { return p.path; }));
+                        const activePathSet = new Set(activePoints.map(function(p) { return normalizePath(p.path); }));
+                        window.__currentActivePathSet = activePathSet;
                         const fIndices = [];
                         const xArr = [], yArr = [], tArr = [], cArr = [];
                         for (let i = 0; i < UNIQUE_FOLDERS.length; i++) {
@@ -1850,6 +2191,13 @@ export class HtmlMapGenerator {
                             }
                         }
                         Plotly.restyle(plotEl, { text: peakTexts }, peakIndices);
+                        if (isWikilinksVisible) {
+                            const wikilinksIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
+                            if (wikilinksIdx !== -1) {
+                                const filteredTrace = buildWikilinksTrace(activePathSet);
+                                Plotly.restyle(plotEl, { x: [filteredTrace.x], y: [filteredTrace.y] }, [wikilinksIdx]);
+                            }
+                        }
                     }
 
                     // Animation & Playback State

@@ -118,6 +118,10 @@ export const STRINGS = {
 		search_not_built: "请先生成地貌图后再搜索",
 		cmd_search: "在知识地貌中搜索",
 		search_match: "匹配度",
+
+		// Wikilinks Network
+		wikilinks_btn: "显示双链网络",
+		cmd_toggle_wikilinks: "切换双链网络连线",
 	},
 	en: {
 		// Settings Tab
@@ -219,6 +223,10 @@ export const STRINGS = {
 		search_not_built: "Please build map first",
 		cmd_search: "Search in Knowledge Topography",
 		search_match: "Match",
+
+		// Wikilinks Network
+		wikilinks_btn: "Show Wikilinks Network",
+		cmd_toggle_wikilinks: "Toggle Wikilinks Network",
 	},
 };
 

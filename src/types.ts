@@ -120,6 +120,11 @@ export interface SemanticSearchResultItem {
 	clusterDomain: string;
 }
 
+export interface VaultLinkItem {
+	source: string;
+	target: string;
+}
+
 export interface MapData {
 	points: Point2D[];
 	clusters: PeakCluster[];
@@ -133,4 +138,5 @@ export interface MapData {
 	maxY: number;
 	timestamp: number;
 	htmlContent?: string;
+	links?: VaultLinkItem[];
 }

@@ -1,5 +1,5 @@
 import { Plugin, Notice, TFile } from "obsidian";
-import { DEFAULT_SETTINGS, KnowledgeMapSettings, MapData, NoteItem, SemanticSearchResultItem } from "./types";
+import { DEFAULT_SETTINGS, KnowledgeMapSettings, MapData, NoteItem, Point2D, SemanticSearchResultItem, VaultLinkItem } from "./types";
 import { KnowledgeMapSettingTab } from "./settings";
 import { KnowledgeMapView, KNOWLEDGE_MAP_VIEW_TYPE } from "./views/KnowledgeMapView";
 import { EmbeddingCacheManager } from "./services/cache";
@@ -101,6 +101,17 @@ export default class KnowledgeMapPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "toggle-wikilinks-network",
+			name: t(this.settings.locale).cmd_toggle_wikilinks,
+			callback: () => {
+				const view = this.getActiveView();
+				if (view) {
+					view.toggleWikilinks();
+				}
+			},
+		});
+
 		// 5. Register Active Leaf Change for Auto-Locating (Radar Probe)
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
@@ -167,6 +178,25 @@ export default class KnowledgeMapPlugin extends Plugin {
 
 	getMapData(): MapData | null {
 		return this.mapData;
+	}
+
+	extractVaultLinks(points: Point2D[]): VaultLinkItem[] {
+		const validPaths = new Set(points.map((p) => p.path));
+		const links: VaultLinkItem[] = [];
+
+		const resolved = this.app.metadataCache.resolvedLinks;
+		if (!resolved) return links;
+
+		for (const sourcePath of validPaths) {
+			const destinations = resolved[sourcePath];
+			if (!destinations) continue;
+
+			for (const targetPath of Object.keys(destinations)) {
+				if (!validPaths.has(targetPath) || sourcePath === targetPath) continue;
+				links.push({ source: sourcePath, target: targetPath });
+			}
+		}
+		return links;
 	}
 
 	async searchTopography(query: string): Promise<SemanticSearchResultItem[]> {
@@ -352,6 +382,7 @@ export default class KnowledgeMapPlugin extends Plugin {
 				allCached,
 				this.settings.contourLevels
 			);
+			mapData.links = this.extractVaultLinks(mapData.points);
 
 			// Step 5: LLM Domain Synthesis
 			if (this.statusBarItem) this.statusBarItem.setText("🗺️ 知识地图: 正在提炼领域标签...");
