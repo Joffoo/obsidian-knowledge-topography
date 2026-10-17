@@ -1,11 +1,17 @@
 # Obsidian Knowledge Topography (知识地貌)
 
-[![Release](https://img.shields.io/github/v/release/Joffoo/obsidian-knowledge-topography?style=flat-square)](https://github.com/Joffoo/obsidian-knowledge-topography/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Obsidian Downloads](https://img.shields.io/badge/Obsidian-Community%20Plugin-7952b3.svg?style=flat-square)](https://obsidian.md/plugins)
+<div align="center">
+<img src="docs/hero.webp" alt="Knowledge Topography — 7 themes preview" width="860">
+<br>
 
 > 🗺️ **把你的 Obsidian 知识库，画成一张起伏的语义等高线地图**
 > *Draw your Obsidian vault as a living semantic topographic landscape*
+
+</div>
+
+[![Release](https://img.shields.io/github/v/release/Joffoo/obsidian-knowledge-topography?style=flat-square)](https://github.com/Joffoo/obsidian-knowledge-topography/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Obsidian Downloads](https://img.shields.io/badge/Obsidian-Community%20Plugin-7952b3.svg?style=flat-square)](https://obsidian.md/plugins)
 
 [中文说明](#-中文说明) | [English Documentation](#-english-documentation)
 
