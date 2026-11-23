@@ -5,10 +5,10 @@ import { KnowledgeMapView, KNOWLEDGE_MAP_VIEW_TYPE } from "./views/KnowledgeMapV
 import { EmbeddingCacheManager } from "./services/cache";
 import { VaultIndexer, resolveNoteTimestamp } from "./services/indexer";
 import { EmbeddingService } from "./services/embedding";
-import { LLMSynthesizer } from "./services/llm";
+import { LLMSynthesizer, ClusterSample, SynthesizeResult } from "./services/llm";
 import { SpatialComputer } from "./services/spatial";
 import { HtmlMapGenerator } from "./services/htmlGenerator";
-import { t } from "./i18n";
+import { t, resolveLocale } from "./i18n";
 
 export default class KnowledgeMapPlugin extends Plugin {
 	settings: KnowledgeMapSettings;
@@ -112,6 +112,14 @@ export default class KnowledgeMapPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "rename-knowledge-map-summits",
+			name: t(this.settings.locale).cmd_rename_summits,
+			callback: () => {
+				void this.renameSummitsOnly();
+			},
+		});
+
 		// 5. Register Active Leaf Change for Auto-Locating (Radar Probe)
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
@@ -132,6 +140,8 @@ export default class KnowledgeMapPlugin extends Plugin {
 
 	onunload(): void {
 		// Do not detach leaves in onunload per official Obsidian review guidelines
+		this.embeddingService?.cancel();
+		this.llmSynthesizer?.cancel();
 	}
 
 	async loadSettings(): Promise<void> {
@@ -291,8 +301,9 @@ export default class KnowledgeMapPlugin extends Plugin {
 	}
 
 	cancelGeneration(): void {
-		this.embeddingService.cancel();
 		this.isGenerating = false;
+		this.embeddingService.cancel();
+		this.llmSynthesizer.cancel();
 		const view = this.getActiveView();
 		if (view) {
 			view.hideProgress();
@@ -302,7 +313,156 @@ export default class KnowledgeMapPlugin extends Plugin {
 		new Notice("已取消知识地图计算任务。");
 	}
 
+	private async runSummitSynthesis(
+		clusterSamples: ClusterSample[],
+		view: KnowledgeMapView | null,
+		stageTitle: string,
+		progressCurrent: number,
+		progressTotal: number
+	): Promise<SynthesizeResult> {
+		const startMsg = t(this.settings.locale).llm_stage_connecting;
+		if (this.statusBarItem) this.statusBarItem.setText(`🗺️ 知识地图: ${startMsg}`);
+		if (view) view.showProgress(startMsg, progressCurrent, progressTotal, stageTitle);
+
+		return await this.llmSynthesizer.synthesizeDomains(clusterSamples, (evt) => {
+			if (!this.isGenerating) return;
+			if (this.statusBarItem) this.statusBarItem.setText(`🗺️ 知识地图: ${evt.message}`);
+			if (view) view.showProgress(evt.message, progressCurrent, progressTotal, stageTitle);
+		});
+	}
+
+	private async persistAndRenderMap(mapData: MapData, view: KnowledgeMapView | null): Promise<void> {
+		const pluginDir = this.manifest.dir ?? `${this.app.vault.configDir}/plugins/knowledge-topography`;
+		const standaloneHtml = HtmlMapGenerator.generate({
+			vaultName: this.app.vault.getName(),
+			initialStyle: this.settings.currentTheme,
+			mapData: mapData,
+			localPlotlyUrl: "./plotly.min.js",
+			showTimeSlider: this.settings.showTimeSlider,
+			locale: resolveLocale(this.settings.locale),
+		});
+		mapData.htmlContent = standaloneHtml;
+
+		try {
+			await this.app.vault.adapter.write(`${pluginDir}/knowledge_map.html`, standaloneHtml);
+		} catch (e) {
+			console.warn("[Knowledge Map] 写入 knowledge_map.html 失败:", e);
+		}
+
+		this.mapData = mapData;
+		await this.saveMapState();
+
+		if (this.statusBarItem) this.statusBarItem.setText("");
+		if (view) {
+			view.hideProgress();
+			await view.render();
+		}
+	}
+
+	async renameSummitsOnly(): Promise<void> {
+		const i18n = t(this.settings.locale);
+		if (this.isGenerating) {
+			new Notice(i18n.notice_busy);
+			return;
+		}
+		if (!this.mapData || !Array.isArray(this.mapData.clusters) || this.mapData.clusters.length === 0) {
+			new Notice(i18n.notice_rename_requires_map);
+			return;
+		}
+
+		const view = this.getActiveView();
+		this.isGenerating = true;
+
+		try {
+			const clusterSamples: ClusterSample[] = [];
+			for (const c of this.mapData.clusters) {
+				const coreNotes = [];
+				for (const n of c.notes.slice(0, 10)) {
+					const file = this.app.vault.getAbstractFileByPath(n.path);
+					if (file instanceof TFile) {
+						const meta = await this.indexer.extractNoteMetadata(file);
+						coreNotes.push({
+							title: n.title,
+							tags: meta.tags,
+							snippet: meta.snippet,
+						});
+					} else {
+						coreNotes.push({
+							title: n.title,
+							tags: n.tags ?? [],
+							snippet: n.snippet ?? "",
+						});
+					}
+				}
+				clusterSamples.push({
+					clusterId: c.id,
+					notesCount: c.notes.length,
+					coreNotes,
+				});
+			}
+
+			const synthResult = await this.runSummitSynthesis(
+				clusterSamples,
+				view,
+				i18n.stage_rename_peaks,
+				0,
+				0
+			);
+
+			if (synthResult.failureCategory === "cancelled" || !this.isGenerating) {
+				return;
+			}
+
+			for (const cluster of this.mapData.clusters) {
+				if (synthResult.domains.has(cluster.id)) {
+					cluster.domain = synthResult.domains.get(cluster.id)!;
+				}
+			}
+
+			await this.persistAndRenderMap(this.mapData, view);
+
+			const elapsedSec = (synthResult.totalMs / 1000).toFixed(1);
+			const locale = resolveLocale(this.settings.locale);
+			if (synthResult.source === "llm") {
+				new Notice(
+					i18n.notice_rename_ok(
+						this.mapData.clusters.length,
+						synthResult.model || this.settings.llmModelName || "LLM",
+						elapsedSec
+					),
+					6000
+				);
+			} else if (synthResult.failureCategory === "not-configured") {
+				new Notice(
+					i18n.notice_rename_ok(
+						this.mapData.clusters.length,
+						locale === "en" ? "Local TF-IDF" : "本地语义兜底",
+						elapsedSec
+					),
+					6000
+				);
+			} else {
+				const reason = synthResult.failureMessage || synthResult.failureCategory || "unknown";
+				new Notice(i18n.notice_rename_fallback(reason), 10000);
+			}
+		} catch (err: unknown) {
+			if (!this.isGenerating) return;
+			const errMsg = err instanceof Error ? err.message : String(err);
+			console.error("[Knowledge Map] 山峰重命名失败:", err);
+			if (this.statusBarItem) this.statusBarItem.setText("");
+			if (view) view.hideProgress();
+			new Notice(`❌ ${errMsg}`, 8000);
+		} finally {
+			this.isGenerating = false;
+		}
+	}
+
 	async generateMap(): Promise<void> {
+		const i18n = t(this.settings.locale);
+		if (this.isGenerating) {
+			new Notice(i18n.notice_busy);
+			return;
+		}
 		const view = this.getActiveView();
 		this.isGenerating = true;
 
@@ -385,8 +545,6 @@ export default class KnowledgeMapPlugin extends Plugin {
 			mapData.links = this.extractVaultLinks(mapData.points);
 
 			// Step 5: LLM Domain Synthesis
-			if (this.statusBarItem) this.statusBarItem.setText("🗺️ 知识地图: 正在提炼领域标签...");
-			if (view) view.showProgress("正在由大模型分析并归纳各山峰领域标签...", 95, 100, "阶段 4/4 · 领域语义提炼");
 			const clusterSamples = mapData.clusters.map((c) => ({
 				clusterId: c.id,
 				notesCount: c.notes.length,
@@ -400,42 +558,39 @@ export default class KnowledgeMapPlugin extends Plugin {
 				}),
 			}));
 
-			const domainMap = await this.llmSynthesizer.synthesizeDomains(clusterSamples);
+			const synthResult = await this.runSummitSynthesis(
+				clusterSamples,
+				view,
+				`阶段 4/4 · ${i18n.stage_peaks}`,
+				95,
+				100
+			);
+			if (synthResult.failureCategory === "cancelled" || !this.isGenerating) {
+				return;
+			}
 			for (const cluster of mapData.clusters) {
-				if (domainMap.has(cluster.id)) {
-					cluster.domain = domainMap.get(cluster.id)!;
+				if (synthResult.domains.has(cluster.id)) {
+					cluster.domain = synthResult.domains.get(cluster.id)!;
 				}
 			}
 
-			// Generate standalone HTML for disk export (using clean relative path ./plotly.min.js without app:// pollution)
-			const pluginDir = this.manifest.dir ?? `${this.app.vault.configDir}/plugins/knowledge-topography`;
-			const standaloneHtml = HtmlMapGenerator.generate({
-				vaultName: this.app.vault.getName(),
-				initialStyle: this.settings.currentTheme,
-				mapData: mapData,
-				localPlotlyUrl: "./plotly.min.js",
-				showTimeSlider: this.settings.showTimeSlider,
-				locale: this.settings.locale === "en" ? "en" : "zh",
-			});
-			mapData.htmlContent = standaloneHtml;
+			// Generate standalone HTML and save state
+			await this.persistAndRenderMap(mapData, view);
 
-			try {
-				await this.app.vault.adapter.write(`${pluginDir}/knowledge_map.html`, standaloneHtml);
-			} catch (e) {
-				console.warn("[Knowledge Map] 写入 knowledge_map.html 失败:", e);
+			if (synthResult.source === "llm" || synthResult.failureCategory === "not-configured") {
+				new Notice(`✅ 知识地图生成成功！共收录 ${allCached.length} 篇笔记。`);
+			} else if (synthResult.source === "partial-fallback") {
+				const reason = synthResult.failureMessage || synthResult.failureCategory || "unknown";
+				new Notice(
+					i18n.notice_map_ok_llm_partial(allCached.length, synthResult.fallbackCount, reason),
+					9000
+				);
+			} else {
+				const reason = synthResult.failureMessage || synthResult.failureCategory || "unknown";
+				new Notice(i18n.notice_map_ok_llm_fallback(allCached.length, reason), 10000);
 			}
-
-			this.mapData = mapData;
-			await this.saveMapState();
-
-			// Step 6: Render View
-			if (this.statusBarItem) this.statusBarItem.setText("");
-			if (view) {
-				view.hideProgress();
-				await view.render();
-			}
-			new Notice(`✅ 知识地图生成成功！共收录 ${allCached.length} 篇笔记。`);
 		} catch (err: unknown) {
+			if (!this.isGenerating) return;
 			const errMsg = err instanceof Error ? err.message : String(err);
 			const errStack = err instanceof Error ? err.stack : "";
 			this.lastErrorStack = errStack || errMsg;

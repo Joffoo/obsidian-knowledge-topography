@@ -184,9 +184,9 @@ export class KnowledgeMapSettingTab extends PluginSettingTab {
 					btn.setDisabled(false);
 					btn.setButtonText(i18n.test_btn);
 					if (res.success) {
-						new Notice(`✅ ${i18n.test_ok}${res.message}`);
+						new Notice(`✅ ${res.message}`, 5000);
 					} else {
-						new Notice(`❌ ${i18n.test_fail}${res.message}`, 6000);
+						new Notice(`❌ ${res.message}`, 7000);
 					}
 				});
 			});

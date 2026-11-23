@@ -1095,10 +1095,72 @@ export class HtmlMapGenerator {
         const SHOW_TIME_SLIDER = ${showTimeSlider};
         const ALL_LINKS = ${allLinksJson};
         let isWikilinksVisible = false;
+        const UNIQUE_FOLDERS_SET = new Set(UNIQUE_FOLDERS);
+        let isUpdatingWikilinks = false;
 
         function normalizePath(p) {
             if (!p) return '';
             return p.split('\\\\').join('/');
+        }
+
+        function getVisibleFolderSet(plotEl) {
+            if (!plotEl || !plotEl.data) return null;
+            const visibleFolders = new Set();
+            const maxIdx = Math.min(UNIQUE_FOLDERS.length, plotEl.data.length - 1);
+            for (let i = 1; i <= maxIdx; i++) {
+                const trace = plotEl.data[i];
+                if (!trace || !UNIQUE_FOLDERS_SET.has(trace.name)) continue;
+                if (trace.visible !== false && trace.visible !== 'legendonly') {
+                    visibleFolders.add(trace.name);
+                }
+            }
+            if (visibleFolders.size === UNIQUE_FOLDERS.length) {
+                return null;
+            }
+            return visibleFolders;
+        }
+
+        function getVisiblePathSet(plotEl) {
+            const visibleFolders = getVisibleFolderSet(plotEl);
+            const timePathSet = window.__currentActivePathSet || null;
+            if (visibleFolders === null && timePathSet === null) {
+                return null;
+            }
+            const result = new Set();
+            for (let i = 0; i < ALL_POINTS.length; i++) {
+                const p = ALL_POINTS[i];
+                const normPath = normalizePath(p.path);
+                if (visibleFolders !== null && !visibleFolders.has(p.folder || '/')) {
+                    continue;
+                }
+                if (timePathSet !== null && !timePathSet.has(normPath)) {
+                    continue;
+                }
+                result.add(normPath);
+            }
+            return result;
+        }
+
+        function refreshWikilinksNetwork(plotEl) {
+            if (!isWikilinksVisible || !plotEl || !plotEl.data || isUpdatingWikilinks) return;
+            const wikilinksIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
+            if (wikilinksIdx === -1) return;
+            const visiblePathSet = getVisiblePathSet(plotEl);
+            const updatedTrace = buildWikilinksTrace(visiblePathSet);
+            isUpdatingWikilinks = true;
+            try {
+                const maybePromise = Plotly.restyle(plotEl, { x: [updatedTrace.x], y: [updatedTrace.y] }, [wikilinksIdx]);
+                if (maybePromise && typeof maybePromise.then === 'function') {
+                    maybePromise.then(
+                        function() { isUpdatingWikilinks = false; },
+                        function() { isUpdatingWikilinks = false; }
+                    );
+                } else {
+                    isUpdatingWikilinks = false;
+                }
+            } catch (e) {
+                isUpdatingWikilinks = false;
+            }
         }
 
         const PATH_COORD_MAP = new Map();
@@ -1175,14 +1237,23 @@ export class HtmlMapGenerator {
 
             const existingIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
             if (isWikilinksVisible) {
-                let activePathSet = null;
-                const timeSlider = document.getElementById('time-slider-input');
-                if (timeSlider && window.__currentActivePathSet) {
-                    activePathSet = window.__currentActivePathSet;
-                }
+                const activePathSet = getVisiblePathSet(plotEl);
                 const trace = buildWikilinksTrace(activePathSet);
                 if (existingIdx !== -1) {
-                    Plotly.restyle(plotEl, { x: [trace.x], y: [trace.y], 'line.color': [trace.line.color] }, [existingIdx]);
+                    isUpdatingWikilinks = true;
+                    try {
+                        const maybePromise = Plotly.restyle(plotEl, { x: [trace.x], y: [trace.y], 'line.color': [trace.line.color] }, [existingIdx]);
+                        if (maybePromise && typeof maybePromise.then === 'function') {
+                            maybePromise.then(
+                                function() { isUpdatingWikilinks = false; },
+                                function() { isUpdatingWikilinks = false; }
+                            );
+                        } else {
+                            isUpdatingWikilinks = false;
+                        }
+                    } catch (e) {
+                        isUpdatingWikilinks = false;
+                    }
                 } else {
                     Plotly.addTraces(plotEl, trace);
                 }
@@ -1470,6 +1541,14 @@ export class HtmlMapGenerator {
                 // Double-click on blank stage to reset view
                 plotEl.on('plotly_doubleclick', function() {
                     resetOverviewView();
+                });
+
+                // Sync wikilinks network when folder legend visibility changes (single-click or double-click)
+                plotEl.on('plotly_restyle', function(eventData) {
+                    if (!isWikilinksVisible || isUpdatingWikilinks) return;
+                    const updates = Array.isArray(eventData) ? eventData[0] : null;
+                    if (!updates || !Object.prototype.hasOwnProperty.call(updates, 'visible')) return;
+                    refreshWikilinksNetwork(plotEl);
                 });
 
                 // Handle Locate Note and Wikilinks messages
@@ -2105,13 +2184,7 @@ export class HtmlMapGenerator {
                             }
                             Plotly.restyle(plotEl, { text: peakTexts }, peakIndices);
                             window.__currentActivePathSet = null;
-                            if (isWikilinksVisible) {
-                                const wikilinksIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
-                                if (wikilinksIdx !== -1) {
-                                    const fullTrace = buildWikilinksTrace(null);
-                                    Plotly.restyle(plotEl, { x: [fullTrace.x], y: [fullTrace.y] }, [wikilinksIdx]);
-                                }
-                            }
+                            refreshWikilinksNetwork(plotEl);
                             return;
                         }
 
@@ -2142,7 +2215,7 @@ export class HtmlMapGenerator {
                         for (let i = 0; i < UNIQUE_FOLDERS.length; i++) {
                             const f = UNIQUE_FOLDERS[i];
                             const pts = (FOLDER_POINTS_MAP[f] || []).filter(function(p) {
-                                return activePathSet.has(p.path);
+                                return activePathSet.has(normalizePath(p.path));
                             });
                             fIndices.push(1 + i);
                             xArr.push(pts.map(function(p) { return p.x; }));
@@ -2191,13 +2264,7 @@ export class HtmlMapGenerator {
                             }
                         }
                         Plotly.restyle(plotEl, { text: peakTexts }, peakIndices);
-                        if (isWikilinksVisible) {
-                            const wikilinksIdx = plotEl.data.findIndex(function(t) { return t.name === '__wikilinks_network__'; });
-                            if (wikilinksIdx !== -1) {
-                                const filteredTrace = buildWikilinksTrace(activePathSet);
-                                Plotly.restyle(plotEl, { x: [filteredTrace.x], y: [filteredTrace.y] }, [wikilinksIdx]);
-                            }
-                        }
+                        refreshWikilinksNetwork(plotEl);
                     }
 
                     // Animation & Playback State

@@ -59,34 +59,10 @@ export class VaultIndexer {
 				continue;
 			}
 
-			// Read file text
-			const text = await this.app.vault.read(file);
-			const cleanContent = this.cleanMarkdown(text);
-			if (cleanContent.trim().length === 0) {
+			const { tags, snippet } = await this.extractNoteMetadata(file);
+			if (snippet.trim().length === 0) {
 				continue;
 			}
-
-			const snippet = cleanContent.slice(0, this.settings.maxCharsPerNote);
-
-			// Extract tags from Obsidian metadata cache
-			const fileCache = this.app.metadataCache.getFileCache(file);
-			const rawTags: string[] = [];
-			if (fileCache?.tags) {
-				for (const t of fileCache.tags) {
-					if (t.tag) rawTags.push(t.tag);
-				}
-			}
-			if (fileCache?.frontmatter?.tags) {
-				const fmTags: unknown = fileCache.frontmatter.tags;
-				if (Array.isArray(fmTags)) {
-					for (const t of fmTags) rawTags.push(String(t));
-				} else if (typeof fmTags === "string") {
-					for (const t of fmTags.split(/[\s,]+/)) if (t.trim()) rawTags.push(t.trim());
-				}
-			}
-			const tags = Array.from(
-				new Set(rawTags.map((t) => t.replace(/^#/, "").trim()))
-			).filter((t) => t.length > 0).slice(0, 5);
 
 			// Note timestamp extraction (custom YAML field or universal ctime)
 			const ctime = resolveNoteTimestamp(this.app, file, this.settings.timeFrontmatterKey);
@@ -110,6 +86,34 @@ export class VaultIndexer {
 		}
 
 		return result;
+	}
+
+	async extractNoteMetadata(file: TFile): Promise<{ tags: string[]; snippet: string }> {
+		const text = await this.app.vault.read(file);
+		const cleanContent = this.cleanMarkdown(text);
+		const snippet = cleanContent.slice(0, this.settings.maxCharsPerNote);
+
+		// Extract tags from Obsidian metadata cache
+		const fileCache = this.app.metadataCache.getFileCache(file);
+		const rawTags: string[] = [];
+		if (fileCache?.tags) {
+			for (const t of fileCache.tags) {
+				if (t.tag) rawTags.push(t.tag);
+			}
+		}
+		if (fileCache?.frontmatter?.tags) {
+			const fmTags: unknown = fileCache.frontmatter.tags;
+			if (Array.isArray(fmTags)) {
+				for (const t of fmTags) rawTags.push(String(t));
+			} else if (typeof fmTags === "string") {
+				for (const t of fmTags.split(/[\s,]+/)) if (t.trim()) rawTags.push(t.trim());
+			}
+		}
+		const tags = Array.from(
+			new Set(rawTags.map((t) => t.replace(/^#/, "").trim()))
+		).filter((t) => t.length > 0).slice(0, 5);
+
+		return { tags, snippet };
 	}
 
 	private isExcluded(path: string, excludedList: string[]): boolean {

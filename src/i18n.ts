@@ -122,6 +122,26 @@ export const STRINGS = {
 		// Wikilinks Network
 		wikilinks_btn: "显示双链网络",
 		cmd_toggle_wikilinks: "切换双链网络连线",
+
+		// Summit Naming & Streaming Diagnostics
+		cmd_rename_summits: "仅重新命名山峰",
+		notice_rename_requires_map: "请先生成知识地貌图，再重新命名山峰。",
+		notice_busy: "知识地貌正在计算中，请稍候或先取消当前任务。",
+		stage_rename_peaks: "山峰命名 · 独立刷新",
+		llm_stage_connecting: "正在连接大模型服务...",
+		llm_stage_fallback_transport: "检测到跨域限制，切换兼容模式请求大模型...",
+		llm_stage_thinking: (model: string, chars: number, sec: number) =>
+			`模型 ${model} 思考中（已生成 ${chars} 字 · ${sec}s）...`,
+		llm_stage_generating: (model: string, chars: number, sec: number) =>
+			`模型 ${model} 正在输出山峰命名（${chars} 字 · ${sec}s）...`,
+		notice_rename_ok: (count: number, model: string, sec: string) =>
+			`✅ 已更新 ${count} 座山峰命名（模型: ${model}，耗时 ${sec}s）。`,
+		notice_rename_fallback: (reason: string) =>
+			`⚠️ 山峰 AI 命名失败（${reason}），已使用本地兜底命名。`,
+		notice_map_ok_llm_fallback: (count: number, reason: string) =>
+			`⚠️ 地图已生成（收录 ${count} 篇），但山峰 AI 命名失败（${reason}），当前已使用本地兜底命名。`,
+		notice_map_ok_llm_partial: (count: number, fallbackCount: number, reason: string) =>
+			`⚠️ 地图已生成（收录 ${count} 篇），有 ${fallbackCount} 座山峰回退为本地命名（${reason}）。`,
 	},
 	en: {
 		// Settings Tab
@@ -227,6 +247,26 @@ export const STRINGS = {
 		// Wikilinks Network
 		wikilinks_btn: "Show Wikilinks Network",
 		cmd_toggle_wikilinks: "Toggle Wikilinks Network",
+
+		// Summit Naming & Streaming Diagnostics
+		cmd_rename_summits: "Rename Summits Only",
+		notice_rename_requires_map: "Please generate the topography map first before renaming summits.",
+		notice_busy: "A topography task is already running. Please wait or cancel it first.",
+		stage_rename_peaks: "Summit Naming",
+		llm_stage_connecting: "Connecting to LLM service...",
+		llm_stage_fallback_transport: "CORS restricted; switching to compatibility request mode...",
+		llm_stage_thinking: (model: string, chars: number, sec: number) =>
+			`Model ${model} thinking (${chars} chars · ${sec}s)...`,
+		llm_stage_generating: (model: string, chars: number, sec: number) =>
+			`Model ${model} generating summit names (${chars} chars · ${sec}s)...`,
+		notice_rename_ok: (count: number, model: string, sec: string) =>
+			`✅ Updated ${count} summit names (model: ${model}, ${sec}s).`,
+		notice_rename_fallback: (reason: string) =>
+			`⚠️ AI summit naming failed (${reason}); applied local fallback names.`,
+		notice_map_ok_llm_fallback: (count: number, reason: string) =>
+			`⚠️ Map built (${count} notes), but AI summit naming failed (${reason}); applied local fallback names.`,
+		notice_map_ok_llm_partial: (count: number, fallbackCount: number, reason: string) =>
+			`⚠️ Map built (${count} notes); ${fallbackCount} summits fell back to local names (${reason}).`,
 	},
 };
 
